@@ -61,15 +61,15 @@ export async function POST(req: NextRequest) {
       // Claude
       anthropic.messages.create({
         model: "claude-sonnet-4-6",
-        max_tokens: 500,
+        max_tokens: 1000,
         system: safeSystem,
         messages: [{ role: "user", content: prompt }],
       }),
 
-      // GPT-4o
+      // GPT-5.4
       openai.chat.completions.create({
         model: "gpt-5.4",
-        max_completion_tokens: 500,
+        max_completion_tokens: 1000,
         messages: [
           { role: "system", content: safeSystem },
           { role: "user", content: prompt },
@@ -84,51 +84,18 @@ export async function POST(req: NextRequest) {
         });
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 500 },
+          generationConfig: {
+            maxOutputTokens: 1000,
+            temperature: 0.7,
+          },
         });
-        return result;
+        const candidate = result.response.candidates?.[0];
+        const text =
+          candidate?.content?.parts
+            ?.map((p: { text?: string }) => p.text || "")
+            .join("") || result.response.text();
+        return { text };
       })(),
     ]);
-const getError = (r: PromiseSettledResult<unknown>, name: string) => {
-      if (r.status === "rejected") {
-        console.error(`${name} error:`, r.reason);
-        return `This model is currently unavailable.`;
-      }
-      return null;
-    };
 
-    const claudeText =
-      claudeRes.status === "fulfilled"
-        ? (claudeRes.value as Anthropic.Message).content[0].type === "text"
-          ? ((claudeRes.value as Anthropic.Message).content[0] as { type: "text"; text: string }).text
-          : getError(claudeRes, "Claude")
-        : getError(claudeRes, "Claude");
-
-    const openaiText =
-      openaiRes.status === "fulfilled"
-        ? openaiRes.value.choices[0].message.content
-        : getError(openaiRes, "OpenAI");
-
-    const geminiText =
-      geminiRes.status === "fulfilled"
-        ? geminiRes.value.response.text()
-        : getError(geminiRes, "Gemini");
-
-    return NextResponse.json({
-      claude: claudeText,
-      openai: openaiText,
-      gemini: geminiText,
-    });
-    return NextResponse.json({
-      claude: claudeText,
-      openai: openaiText,
-      gemini: geminiText,
-    });
-  } catch (error) {
-    console.error("API error:", error);
-    return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
-      { status: 500 }
-    );
-  }
-}
+    const getError = (r: PromiseSettledR
