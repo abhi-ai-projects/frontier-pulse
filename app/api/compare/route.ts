@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       // GPT-4o
       openai.chat.completions.create({
         model: "gpt-5.4",
-        max_tokens: 500,
+        max_completion_tokens: 500,
         messages: [
           { role: "system", content: safeSystem },
           { role: "user", content: prompt },
