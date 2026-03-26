@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     const openaiText =
       openaiRes.status === "fulfilled"
-        ? openaiRes.value.choices[0].message.content
+        ? (console.log("OpenAI raw:", JSON.stringify(openaiRes.value.choices[0])), openaiRes.value.choices[0].message.content)
         : getError(openaiRes, "OpenAI");
 
     const geminiText =
