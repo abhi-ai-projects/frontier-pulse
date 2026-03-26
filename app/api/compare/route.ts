@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
       openai.chat.completions.create({
         model: "gpt-5.4",
-        max_completion_tokens: 1000,
+        max_completion_tokens: 4000,
         messages: [
           { role: "system", content: openaiSystem },
           { role: "user", content: prompt },
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     const openaiText =
       openaiRes.status === "fulfilled"
-        ? (console.log("OpenAI raw:", JSON.stringify(openaiRes.value.choices[0])), openaiRes.value.choices[0].message.content)
+        ? openaiRes.value.choices[0].message.content
         : getError(openaiRes, "OpenAI");
 
     const geminiText =
