@@ -89,31 +89,36 @@ export async function POST(req: NextRequest) {
         return result;
       })(),
     ]);
-
-    const getError = (r: PromiseSettledResult<unknown>) =>
-      r.status === "rejected" ? "This model is currently unavailable." : null;
+const getError = (r: PromiseSettledResult<unknown>, name: string) => {
+      if (r.status === "rejected") {
+        console.error(`${name} error:`, r.reason);
+        return `This model is currently unavailable.`;
+      }
+      return null;
+    };
 
     const claudeText =
       claudeRes.status === "fulfilled"
         ? (claudeRes.value as Anthropic.Message).content[0].type === "text"
-          ? (
-              claudeRes.value as Anthropic.Message & {
-                content: [{ type: "text"; text: string }];
-              }
-            ).content[0].text
-          : getError(claudeRes)
-        : getError(claudeRes);
+          ? ((claudeRes.value as Anthropic.Message).content[0] as { type: "text"; text: string }).text
+          : getError(claudeRes, "Claude")
+        : getError(claudeRes, "Claude");
 
     const openaiText =
       openaiRes.status === "fulfilled"
         ? openaiRes.value.choices[0].message.content
-        : getError(openaiRes);
+        : getError(openaiRes, "OpenAI");
 
     const geminiText =
       geminiRes.status === "fulfilled"
         ? geminiRes.value.response.text()
-        : getError(geminiRes);
+        : getError(geminiRes, "Gemini");
 
+    return NextResponse.json({
+      claude: claudeText,
+      openai: openaiText,
+      gemini: geminiText,
+    });
     return NextResponse.json({
       claude: claudeText,
       openai: openaiText,
