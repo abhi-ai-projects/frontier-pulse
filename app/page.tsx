@@ -53,9 +53,9 @@ const TASK_CATEGORIES = [
 ];
 
 const MODELS = [
-  { key: "claude", label: "Claude", color: "from-orange-500/10" },
-  { key: "openai", label: "GPT-4o", color: "from-green-500/10" },
-  { key: "gemini", label: "Gemini", color: "from-blue-500/10" },
+  { key: "claude", label: "Claude", subtitle: "Thorough & judgment-driven", color: "from-orange-500/10" },
+  { key: "openai", label: "GPT-5.4", subtitle: "Structured & send-ready", color: "from-green-500/10" },
+  { key: "gemini", label: "Gemini", subtitle: "Contextual & thorough", color: "from-blue-500/10" },
 ];
 
 const FREE_LIMIT = 3;
@@ -157,8 +157,7 @@ export default function Home() {
             Frontier Pulse
           </h1>
           <p className="text-gray-400 text-sm">
-            Compare Claude, GPT-4o, and Gemini — side by side, on what actually
-            matters
+            Compare Claude, GPT-5.4, and Gemini — side by side, on what actually matters
           </p>
           {attemptsUsed > 0 && !showLoginPrompt && (
             <p className="text-xs text-gray-600 mt-2">
@@ -268,9 +267,12 @@ export default function Home() {
                     className={`bg-gradient-to-b ${model.color} to-white/5 border border-white/10 rounded-2xl p-5 min-h-56`}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-sm font-semibold text-white">
-                        {model.label}
-                      </h2>
+                      <div>
+                        <h2 className="text-sm font-semibold text-white">
+                          {model.label}
+                        </h2>
+                        <p className="text-xs text-gray-500 mt-0.5">{model.subtitle}</p>
+                      </div>
                       {responses[model.key] && (
                         <button
                           onClick={() =>
