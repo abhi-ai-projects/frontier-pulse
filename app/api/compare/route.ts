@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
-            maxOutputTokens: 1000,
+            maxOutputTokens: 2000,
             temperature: 0.9,
             stopSequences: [],
           },
