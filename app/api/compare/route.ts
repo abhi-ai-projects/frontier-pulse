@@ -68,9 +68,16 @@ export async function POST(req: NextRequest) {
         });
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
+          generationConfig: {
+            maxOutputTokens: 1000,
+            temperature: 0.9,
+            stopSequences: [],
+          },
         });
         const candidate = result.response.candidates?.[0];
+        if (candidate?.finishReason && candidate.finishReason !== "STOP" && candidate.finishReason !== "MAX_TOKENS") {
+          console.warn(`Gemini stopped early: ${candidate.finishReason}`);
+        }
         const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();
         return { text };
       })(),
