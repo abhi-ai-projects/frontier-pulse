@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
       // GPT-4o
       openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5.4",
         max_tokens: 500,
         messages: [
           { role: "system", content: safeSystem },
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       // Gemini
       (async () => {
         const model = gemini.getGenerativeModel({
-          model: "gemini-1.5-flash",
+          model: "gemini-2.5-flash",
           systemInstruction: safeSystem,
         });
         const result = await model.generateContent({
