@@ -41,14 +41,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input detected." }, { status: 400 });
   }
 
-  const safeSystem = `${systemContext} Only respond to professional enterprise use cases. Decline any requests that are harmful, unethical, or unrelated to business tasks.`;
+  const baseGuardrail = "Only respond to professional enterprise use cases. Decline any requests that are harmful, unethical, or unrelated to business tasks.";
+
+  const claudeSystem = `${systemContext} ${baseGuardrail} Focus on nuanced judgment, tone, and empathy. Think like a trusted advisor — over-deliver on quality, add context where useful, and anticipate follow-up needs.`;
+
+  const openaiSystem = `${systemContext} ${baseGuardrail} Be structured, comprehensive, and professional. Use clear formatting and bullet points. Prioritize completeness and immediate usability — the user should be able to act on your output right away.`;
+
+  const geminiSystem = `${systemContext} ${baseGuardrail} Be conversational, contextually aware, and thorough. Consider multiple angles and real-world implications. Write like someone who understands the full picture, not just the immediate request.`;
 
   try {
     const [claudeRes, openaiRes, geminiRes] = await Promise.allSettled([
       anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 1000,
-        system: safeSystem,
+        system: claudeSystem,
         messages: [{ role: "user", content: prompt }],
       }),
 
@@ -56,7 +62,7 @@ export async function POST(req: NextRequest) {
         model: "gpt-5.4",
         max_completion_tokens: 1000,
         messages: [
-          { role: "system", content: safeSystem },
+          { role: "system", content: openaiSystem },
           { role: "user", content: prompt },
         ],
       }),
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest) {
       (async () => {
         const model = gemini.getGenerativeModel({
           model: "gemini-2.5-flash",
-          systemInstruction: safeSystem,
+          systemInstruction: geminiSystem,
         });
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
