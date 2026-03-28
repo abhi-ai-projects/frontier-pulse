@@ -43,11 +43,11 @@ export async function POST(req: NextRequest) {
 
   const baseGuardrail = "Only respond to professional enterprise use cases. Decline any requests that are harmful, unethical, or unrelated to business tasks.";
 
-  const claudeSystem = `${systemContext} ${baseGuardrail} Focus on nuanced judgment, tone, and empathy. Think like a trusted advisor — over-deliver on quality, add context where useful, and anticipate follow-up needs.`;
+  const claudeSystem = `${systemContext} ${baseGuardrail} Focus on nuanced judgment, tone, and empathy. Think like a trusted advisor who anticipates needs and adds strategic context. Be thorough but disciplined — aim for 300-400 words maximum. Do not add checklists, sending tips, or meta-commentary about the response. Deliver the work product itself.`;
 
-  const openaiSystem = `${systemContext} ${baseGuardrail} Be structured, comprehensive, and professional. Use clear formatting and bullet points. Prioritize completeness and immediate usability — the user should be able to act on your output right away.`;
+  const openaiSystem = `${systemContext} ${baseGuardrail} Be structured, professional, and immediately actionable. Use clear formatting and bullet points. Aim for 250-350 words. Prioritize something the user can use or send right away with minimal editing. Do not offer multiple versions or ask clarifying questions — just deliver the best version.`;
 
-  const geminiSystem = `${systemContext} ${baseGuardrail} Be conversational, contextually aware, and thorough. Consider multiple angles and real-world implications. Write like someone who understands the full picture, not just the immediate request.`;
+  const geminiSystem = `${systemContext} ${baseGuardrail} Be thorough, contextually aware, and practical. Consider real-world implications and bring genuine depth. Aim for 300-400 words. Always write a complete response — it is critical that you finish every sentence and section you start. Do not truncate.`;
 
   try {
     const [claudeRes, openaiRes, geminiRes] = await Promise.allSettled([
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
       openai.chat.completions.create({
         model: "gpt-5.4",
-        max_completion_tokens: 4000,
+        max_completion_tokens: 8000,
         messages: [
           { role: "system", content: openaiSystem },
           { role: "user", content: prompt },
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
-            maxOutputTokens: 2000,
+            maxOutputTokens: 3000,
             temperature: 0.9,
             stopSequences: [],
           },
