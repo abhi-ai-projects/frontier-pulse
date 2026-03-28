@@ -275,9 +275,23 @@ export default function Home() {
                       </div>
                       {responses[model.key] && (
                         <button
-                          onClick={() =>
-                            navigator.clipboard.writeText(responses[model.key])
-                          }
+                          onClick={() => {
+                            const raw = responses[model.key] || "";
+                            const plain = raw
+                              .replace(/#{1,6}\s+/g, "")
+                              .replace(/\*\*(.+?)\*\*/g, "$1")
+                              .replace(/\*(.+?)\*/g, "$1")
+                              .replace(/^[-*]\s+/gm, "• ")
+                              .replace(/^(\d+)\.\s+/gm, "$1. ")
+                              .replace(/\|.+\|/g, "")
+                              .replace(/[-]{3,}/g, "")
+                              .replace(/
+{3,}/g, "
+
+")
+                              .trim();
+                            navigator.clipboard.writeText(plain);
+                          }}
                           className="text-xs text-gray-500 hover:text-white transition"
                         >
                           Copy
