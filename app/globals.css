@@ -1,26 +1,77 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bg: #0c0b0a;
+  --bg-panel: #141210;
+  --bg-elevated: #1a1714;
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.15);
+  --text-primary: #f0ede8;
+  --text-secondary: #8a8279;
+  --text-muted: #4a4540;
+  --accent: #e8673a;
+  --accent-dim: rgba(232, 103, 58, 0.15);
+  --claude-glow: rgba(232, 103, 58, 0.12);
+  --openai-glow: rgba(74, 222, 128, 0.08);
+  --gemini-glow: rgba(96, 165, 250, 0.08);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
 }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.fade-up {
+  animation: fadeUp 0.5s ease forwards;
+}
+
+.fade-up-1 { animation-delay: 0.1s; opacity: 0; }
+.fade-up-2 { animation-delay: 0.2s; opacity: 0; }
+.fade-up-3 { animation-delay: 0.3s; opacity: 0; }
+
+.shimmer-text {
+  background: linear-gradient(90deg, var(--text-secondary) 25%, var(--text-primary) 50%, var(--text-secondary) 75%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s infinite;
+}
+
+.prose-dark h1, .prose-dark h2, .prose-dark h3 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.prose-dark p { margin-bottom: 0.75em; line-height: 1.7; }
+.prose-dark ul, .prose-dark ol { padding-left: 1.25em; margin-bottom: 0.75em; }
+.prose-dark li { margin-bottom: 0.35em; line-height: 1.65; }
+.prose-dark strong { color: var(--text-primary); font-weight: 600; }
+.prose-dark table { width: 100%; border-collapse: collapse; margin-bottom: 1em; font-size: 0.85em; }
+.prose-dark th, .prose-dark td { padding: 0.5em 0.75em; border: 1px solid var(--border); text-align: left; }
+.prose-dark th { background: var(--bg-elevated); color: var(--text-secondary); font-weight: 500; }
