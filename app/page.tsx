@@ -284,11 +284,8 @@ export default function Home() {
                               .replace(/^[-*]\s+/gm, "• ")
                               .replace(/^(\d+)\.\s+/gm, "$1. ")
                               .replace(/\|.+\|/g, "")
-                              .replace(/[-]{3,}/g, "")
-                              .replace(/
-{3,}/g, "
-
-")
+                              .replace(/---/g, "")
+                              .replace(/\n{3,}/g, "\n\n")
                               .trim();
                             navigator.clipboard.writeText(plain);
                           }}
