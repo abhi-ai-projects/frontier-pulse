@@ -2,7 +2,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
-type Tab = "task" | "cost" | "content";
+type Tab = "task";
 
 const TASK_CATEGORIES = [
   {
@@ -28,8 +28,32 @@ const TASK_CATEGORIES = [
   },
 ];
 
+const MODEL_INSIGHTS: Record<string, Record<string, string>> = {
+  write: {
+    claude:  "Led with tone and emotional intelligence — built for trust, not just clarity.",
+    openai:  "Optimized for structure and immediate usability — ready to send with minimal edits.",
+    gemini:  "Went broadest in scope — covered angles the others didn't, at the cost of concision.",
+  },
+  analyze: {
+    claude:  "Surfaced the judgment calls and strategic implications — thinks like an advisor.",
+    openai:  "Organized for scanning and action — strong on completeness and decision support.",
+    gemini:  "Went deepest on context and nuance — best for understanding, not just summarizing.",
+  },
+  decide: {
+    claude:  "Named the tradeoffs others avoided — most willing to take a position.",
+    openai:  "Framed the decision as a structured problem — clear criteria, clear recommendation.",
+    gemini:  "Explored the widest range of considerations — best if you're still in discovery mode.",
+  },
+};
+
+const BEST_FOR: Record<string, string> = {
+  write:   "Claude if tone matters most · GPT-5.4 if you need to send it fast · Gemini if you want broader coverage",
+  analyze: "Claude if you need a recommendation · GPT-5.4 if you need it scannable · Gemini if depth matters",
+  decide:  "Claude if you want a direct opinion · GPT-5.4 if you want a framework · Gemini if you're still exploring",
+};
+
 const MODELS = [
-  { key: "claude", label: "Claude",  maker: "Anthropic", desc: "Judgment-driven",    dot: "#ff9f6b" },
+  { key: "claude", label: "Claude",  maker: "Anthropic", desc: "Judgment-driven",     dot: "#ff9f6b" },
   { key: "openai", label: "GPT-5.4", maker: "OpenAI",    desc: "Structured & precise", dot: "#63d68d" },
   { key: "gemini", label: "Gemini",  maker: "Google",    desc: "Contextually thorough", dot: "#6ab4f5" },
 ];
@@ -54,7 +78,6 @@ function stripMarkdown(t: string) {
 
 export default function Home() {
   const [activeTab, setActiveTab]       = useState<Tab>("task");
-  const [prevTab,   setPrevTab]         = useState<Tab>("task");
   const [task,      setTask]            = useState(TASK_CATEGORIES[0]);
   const [prompt,    setPrompt]          = useState("");
   const [responses, setResponses]       = useState<Record<string,string>>({});
@@ -63,7 +86,7 @@ export default function Home() {
   const [gated,     setGated]           = useState(false);
   const [attempts,  setAttempts]        = useState(getAttempts());
 
-  const switchTab = (t: Tab) => { setPrevTab(activeTab); setActiveTab(t); };
+  const switchTab = (t: Tab) => { setActiveTab(t); };
 
   const compare = async () => {
     if (!prompt.trim()) return;
@@ -97,12 +120,10 @@ export default function Home() {
         <span style={{ fontFamily:"'Sora',sans-serif", fontSize:15, fontWeight:600, letterSpacing:"-0.02em", color:"#f5f5f7" }}>
           Frontier Pulse
         </span>
-        <div style={{ display:"flex", gap:2, background:"rgba(255,255,255,0.05)", borderRadius:100, padding:3 }}>
-          {(["task","cost","content"] as Tab[]).map(t => (
-            <button key={t} className={`nav-pill${activeTab===t?" active":""}`} onClick={()=>switchTab(t)}>
-              {{ task:"Task Compare", cost:"Cost Insights", content:"Your Content" }[t]}
-            </button>
-          ))}
+        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Sora',sans-serif", letterSpacing:"0.08em", textTransform:"uppercase" }}>
+            Task Compare
+          </span>
         </div>
         <div style={{ width:120, display:"flex", justifyContent:"flex-end" }}>
           {attempts > 0 && !gated && (
@@ -117,16 +138,13 @@ export default function Home() {
       <main style={{ paddingTop:56, minHeight:"100vh", background:"#000" }}>
 
         {/* ── Hero ── */}
-        <section style={{ textAlign:"center", padding:"80px 24px 64px", maxWidth:680, margin:"0 auto" }}>
-          <p className="anim-hero anim-delay-1" style={{ fontFamily:"'Sora',sans-serif", fontSize:11, fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#6e6e73", marginBottom:20 }}>
-            AI Model Intelligence
-          </p>
-          <h1 className="anim-hero anim-delay-2" style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(44px,7vw,80px)", fontWeight:700, letterSpacing:"-0.04em", lineHeight:1.05, color:"#f5f5f7", marginBottom:20 }}>
-            Compare what<br/>
-            <span style={{ color:"#a1a1a6" }}>actually matters.</span>
+        <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 40px", maxWidth:680, margin:"0 auto" }}>
+          <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(28px,4vw,42px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
+            See how Claude, GPT-5.4 &amp; Gemini<br/>
+            <span style={{ color:"#6e6e73", fontWeight:400 }}>actually think — side by side.</span>
           </h1>
-          <p className="anim-hero anim-delay-3" style={{ fontSize:17, fontWeight:300, color:"#6e6e73", lineHeight:1.65, maxWidth:480, margin:"0 auto" }}>
-            Claude, GPT-5.4, and Gemini. Side by side. On the work you actually do.
+          <p style={{ fontSize:14, color:"#3a3a3c", fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em" }}>
+            Write · Analyze · Decide — pick a mode, enter your prompt, see the difference.
           </p>
         </section>
 
@@ -237,6 +255,34 @@ export default function Home() {
               </div>
             )}
 
+            {/* What just happened + Best for */}
+            {hasRes && !loading && (
+              <div className="anim-hero anim-delay-4" style={{ marginTop:32 }}>
+                {/* Per-model insight */}
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:20 }}>
+                  {MODELS.map(m => (
+                    <div key={m.key} style={{ padding:"14px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12 }}>
+                      <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>
+                        {m.label} · What just happened
+                      </div>
+                      <p style={{ fontSize:12, color:"#6e6e73", lineHeight:1.6, fontFamily:"'Figtree',sans-serif" }}>
+                        {MODEL_INSIGHTS[task.id]?.[m.key] || ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {/* Best for */}
+                <div style={{ padding:"16px 20px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, display:"flex", alignItems:"flex-start", gap:12 }}>
+                  <div style={{ fontSize:10, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", paddingTop:2 }}>
+                    Best for →
+                  </div>
+                  <p style={{ fontSize:12, color:"#6e6e73", lineHeight:1.6, fontFamily:"'Figtree',sans-serif" }}>
+                    {BEST_FOR[task.id] || ""}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Empty State */}
             {!loading && !hasRes && !gated && (
               <div style={{ textAlign:"center",padding:"48px 0",color:"#3a3a3c" }}>
@@ -247,21 +293,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* COST TAB */}
-          <div className={`section-transition ${activeTab==="cost"?"section-visible":"section-hidden"}`}>
-            <div style={{ textAlign:"center",padding:"80px 0",color:"#3a3a3c" }}>
-              <p style={{ fontFamily:"'Sora',sans-serif",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase" }}>Coming soon</p>
-              <h2 style={{ fontFamily:"'Sora',sans-serif",fontSize:32,fontWeight:700,letterSpacing:"-0.03em",marginTop:12,color:"#6e6e73" }}>Cost Insights</h2>
-            </div>
-          </div>
 
-          {/* CONTENT TAB */}
-          <div className={`section-transition ${activeTab==="content"?"section-visible":"section-hidden"}`}>
-            <div style={{ textAlign:"center",padding:"80px 0",color:"#3a3a3c" }}>
-              <p style={{ fontFamily:"'Sora',sans-serif",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase" }}>Coming soon</p>
-              <h2 style={{ fontFamily:"'Sora',sans-serif",fontSize:32,fontWeight:700,letterSpacing:"-0.03em",marginTop:12,color:"#6e6e73" }}>Your Content</h2>
-            </div>
-          </div>
 
         </div>
       </main>
