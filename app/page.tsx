@@ -10,21 +10,21 @@ const TASK_CATEGORIES = [
     label: "Write",
     icon: "✦",
     placeholder: "What do you need to communicate, and to whom? E.g. 'Reply to an enterprise client whose AI project is 3 weeks delayed — they have an exec review next Friday' or 'Pitch moving our team to Claude API to our CTO' or 'Announce a reorg to my team of 12'",
-    systemContext: "You are a professional communication expert with deep enterprise experience. Help craft clear, purposeful, and well-toned written communications for professional contexts.",
+    systemContext: "You are a professional communication expert. Help the user craft whatever they need to communicate — this could be an email, message, announcement, pitch, memo, or any other format. Follow the user's lead on format and context. Do not default to email unless the user specifies it.",
   },
   {
     id: "analyze",
     label: "Analyze",
     icon: "✦",
     placeholder: "What situation, market, or decision do you want to understand better? E.g. 'Compare Anthropic vs OpenAI for enterprise API customers' or 'Assess risks of adopting a third-party LLM API in a HIPAA environment' or 'Summarize this pilot result for our CTO'",
-    systemContext: "You are a senior strategy and analysis expert. Break down complex situations with clarity, structure your thinking, and surface the insights that actually matter for decision-making.",
+    systemContext: "You are a senior strategy and analysis expert. Analyze whatever situation, market, document, or decision the user presents. Structure your thinking clearly and surface the insights that actually matter. Follow the user's lead on scope and depth.",
   },
   {
     id: "decide",
     label: "Decide",
     icon: "✦",
     placeholder: "What are you weighing up? E.g. 'Should we standardize on one AI model or run Claude and GPT in parallel?' or 'I have two job offers — help me think through the tradeoffs' or 'Should we delay our product launch by 6 weeks?'",
-    systemContext: "You are a trusted advisor helping someone think through a consequential decision. Lay out the tradeoffs clearly, surface the considerations they may be missing, and help them reach a confident, well-reasoned conclusion.",
+    systemContext: "You are a trusted advisor helping someone think through a decision. Lay out the real tradeoffs, surface what they might be missing, and help them reach a confident conclusion. Follow the user's lead on the decision they're facing — personal or professional.",
   },
 ];
 
