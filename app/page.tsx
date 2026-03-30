@@ -120,11 +120,7 @@ export default function Home() {
         <span style={{ fontFamily:"'Sora',sans-serif", fontSize:15, fontWeight:600, letterSpacing:"-0.02em", color:"#f5f5f7" }}>
           Frontier Pulse
         </span>
-        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-          <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Sora',sans-serif", letterSpacing:"0.08em", textTransform:"uppercase" }}>
-            Task Compare
-          </span>
-        </div>
+<div />
         <div style={{ width:120, display:"flex", justifyContent:"flex-end" }}>
           {attempts > 0 && !gated && (
             <span style={{ fontSize:11, color:"#6e6e73", fontFamily:"'Sora',sans-serif" }}>
@@ -139,7 +135,7 @@ export default function Home() {
 
         {/* ── Hero ── */}
         <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 40px", maxWidth:680, margin:"0 auto" }}>
-          <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(32px,4.5vw,52px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
+          <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(22px,2.8vw,36px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
             Same prompt. Three minds.
           </h1>
           <p style={{ fontSize:14, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.06em" }}>
