@@ -5,11 +5,27 @@ import ReactMarkdown from "react-markdown";
 type Tab = "task" | "cost" | "content";
 
 const TASK_CATEGORIES = [
-  { id: "email",    label: "Customer Email",      icon: "✦", placeholder: "E.g. 'Reply to an enterprise client whose implementation is 3 weeks delayed — they have an exec review next Friday'", systemContext: "You are a professional enterprise customer success manager. Write clear, empathetic, and actionable responses." },
-  { id: "summary",  label: "Strategy Summary",    icon: "✦", placeholder: "Paste a strategy doc, meeting notes, or brief to summarize for C-suite leadership...", systemContext: "You are a management consultant. Summarize clearly for a C-suite audience. Be concise, structured, and insight-driven." },
-  { id: "analysis", label: "Competitive Analysis",icon: "✦", placeholder: "E.g. 'Compare Anthropic vs OpenAI for enterprise API customers'", systemContext: "You are a senior strategy analyst. Provide structured, balanced, and evidence-based competitive analysis." },
-  { id: "pitch",    label: "Executive Pitch",     icon: "✦", placeholder: "E.g. 'Pitch adopting Claude API to our CTO as a replacement for our OpenAI setup'", systemContext: "You are an expert at crafting executive-level business pitches. Be persuasive, concise, and ROI-focused." },
-  { id: "risk",     label: "Risk Assessment",     icon: "✦", placeholder: "E.g. 'Risks of a healthcare company adopting a third-party LLM API for processing patient intake forms'", systemContext: "You are a risk management expert. Identify risks clearly, rate their severity, and suggest mitigations." },
+  {
+    id: "write",
+    label: "Write",
+    icon: "✦",
+    placeholder: "What do you need to communicate, and to whom? E.g. 'Reply to an enterprise client whose AI project is 3 weeks delayed — they have an exec review next Friday' or 'Pitch moving our team to Claude API to our CTO' or 'Announce a reorg to my team of 12'",
+    systemContext: "You are a professional communication expert with deep enterprise experience. Help craft clear, purposeful, and well-toned written communications for professional contexts.",
+  },
+  {
+    id: "analyze",
+    label: "Analyze",
+    icon: "✦",
+    placeholder: "What situation, market, or decision do you want to understand better? E.g. 'Compare Anthropic vs OpenAI for enterprise API customers' or 'Assess risks of adopting a third-party LLM API in a HIPAA environment' or 'Summarize this pilot result for our CTO'",
+    systemContext: "You are a senior strategy and analysis expert. Break down complex situations with clarity, structure your thinking, and surface the insights that actually matter for decision-making.",
+  },
+  {
+    id: "decide",
+    label: "Decide",
+    icon: "✦",
+    placeholder: "What are you weighing up? E.g. 'Should we standardize on one AI model or run Claude and GPT in parallel?' or 'I have two job offers — help me think through the tradeoffs' or 'Should we delay our product launch by 6 weeks?'",
+    systemContext: "You are a trusted advisor helping someone think through a consequential decision. Lay out the tradeoffs clearly, surface the considerations they may be missing, and help them reach a confident, well-reasoned conclusion.",
+  },
 ];
 
 const MODELS = [
