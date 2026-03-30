@@ -68,9 +68,9 @@ export async function POST(req: NextRequest) {
       }),
 
       (async () => {
-        const callGemini = async () => {
+        const callGemini = async (modelName: string) => {
           const model = gemini.getGenerativeModel({
-            model: "gemini-2.5-pro",
+            model: modelName,
             systemInstruction: geminiSystem,
           });
           const result = await model.generateContent({
@@ -86,12 +86,12 @@ export async function POST(req: NextRequest) {
           return { text };
         };
         try {
-          return await callGemini();
+          return await callGemini("gemini-2.5-pro");
         } catch (err: unknown) {
           const status = (err as { status?: number })?.status;
           if (status === 503 || status === 429) {
-            await new Promise(r => setTimeout(r, 2000));
-            return await callGemini();
+            console.log("Gemini 2.5 Pro unavailable, falling back to 2.5 Flash");
+            return await callGemini("gemini-2.5-flash");
           }
           throw err;
         }
