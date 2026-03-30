@@ -43,11 +43,11 @@ export async function POST(req: NextRequest) {
 
   const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
 
-  const claudeSystem = `${systemContext} ${baseGuardrail} You are a trusted advisor. Lead with judgment and nuance. Anticipate what the user actually needs, not just what they asked for. Be direct, complete, and confident — aim for 300-400 words. Do not add meta-commentary, tips, or caveats about your own response. Deliver the work product itself.`;
+  const claudeSystem = `${systemContext} ${baseGuardrail} You are a trusted advisor. Always produce a complete, substantive response immediately — never ask for clarification or more details. If the input is brief or vague, make reasonable assumptions and proceed. Lead with judgment and nuance. Be direct and confident — aim for 300-400 words. Do not add meta-commentary or caveats. Deliver the work product itself.`;
 
-  const openaiSystem = `${systemContext} ${baseGuardrail} You are a sharp, structured professional. Deliver a complete, immediately usable response. Use clear formatting where it helps. Aim for 250-350 words. Do not offer multiple versions, ask clarifying questions, or suggest alternatives at the end — commit to one excellent answer and deliver it.`;
+  const openaiSystem = `${systemContext} ${baseGuardrail} You are a sharp, structured professional. Always produce a complete, immediately usable response — never ask for clarification or more details. If the input is brief or vague, make reasonable assumptions and proceed. Use clear formatting where it helps. Aim for 250-350 words. Commit to one excellent answer and deliver it. Do not offer multiple versions or suggest alternatives at the end.`;
 
-  const geminiSystem = `${systemContext} ${baseGuardrail} You are a thorough, contextually aware thinker. Go beyond the obvious — surface angles, implications, and considerations the user may not have thought of. Aim for 300-400 words. Always complete every sentence and section you start. Never truncate your response mid-thought.`;
+  const geminiSystem = `${systemContext} ${baseGuardrail} You are a thorough, contextually aware thinker. Always produce a complete, substantive response immediately — never ask for clarification or more details. If the input is brief or vague, make reasonable assumptions and proceed. Go beyond the obvious — surface angles and implications the user may not have considered. Aim for 300-400 words. Always complete every sentence and section you start. Never truncate.`;
 
   try {
     const [claudeRes, openaiRes, geminiRes] = await Promise.allSettled([
@@ -68,24 +68,33 @@ export async function POST(req: NextRequest) {
       }),
 
       (async () => {
-        const model = gemini.getGenerativeModel({
-          model: "gemini-2.5-pro",
-          systemInstruction: geminiSystem,
-        });
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            maxOutputTokens: 3000,
-            temperature: 1.0,
-            stopSequences: [],
-          },
-        });
-        const candidate = result.response.candidates?.[0];
-        if (candidate?.finishReason && candidate.finishReason !== "STOP" && candidate.finishReason !== "MAX_TOKENS") {
-          console.warn(`Gemini stopped early: ${candidate.finishReason}`);
+        const callGemini = async () => {
+          const model = gemini.getGenerativeModel({
+            model: "gemini-2.5-pro",
+            systemInstruction: geminiSystem,
+          });
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              maxOutputTokens: 3000,
+              temperature: 1.0,
+              stopSequences: [],
+            },
+          });
+          const candidate = result.response.candidates?.[0];
+          const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();
+          return { text };
+        };
+        try {
+          return await callGemini();
+        } catch (err: unknown) {
+          const status = (err as { status?: number })?.status;
+          if (status === 503 || status === 429) {
+            await new Promise(r => setTimeout(r, 2000));
+            return await callGemini();
+          }
+          throw err;
         }
-        const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();
-        return { text };
       })(),
     ]);
 
