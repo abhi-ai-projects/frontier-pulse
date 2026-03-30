@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input detected." }, { status: 400 });
   }
 
-  const baseGuardrail = "Only respond to professional enterprise use cases. Decline any requests that are harmful, unethical, or unrelated to business tasks.";
+  const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
 
-  const claudeSystem = `${systemContext} ${baseGuardrail} Focus on nuanced judgment, tone, and empathy. Think like a trusted advisor who anticipates needs and adds strategic context. Be thorough but disciplined — aim for 300-400 words maximum. Do not add checklists, sending tips, or meta-commentary about the response. Deliver the work product itself.`;
+  const claudeSystem = `${systemContext} ${baseGuardrail} You are a trusted advisor. Lead with judgment and nuance. Anticipate what the user actually needs, not just what they asked for. Be direct, complete, and confident — aim for 300-400 words. Do not add meta-commentary, tips, or caveats about your own response. Deliver the work product itself.`;
 
-  const openaiSystem = `${systemContext} ${baseGuardrail} Be structured, professional, and immediately actionable. Use clear formatting and bullet points. Aim for 250-350 words. Prioritize something the user can use or send right away with minimal editing. Do not offer multiple versions or ask clarifying questions — just deliver the best version.`;
+  const openaiSystem = `${systemContext} ${baseGuardrail} You are a sharp, structured professional. Deliver a complete, immediately usable response. Use clear formatting where it helps. Aim for 250-350 words. Do not offer multiple versions, ask clarifying questions, or suggest alternatives at the end — commit to one excellent answer and deliver it.`;
 
-  const geminiSystem = `${systemContext} ${baseGuardrail} Be thorough, contextually aware, and practical. Consider real-world implications and bring genuine depth. Aim for 300-400 words. Always write a complete response — it is critical that you finish every sentence and section you start. Do not truncate.`;
+  const geminiSystem = `${systemContext} ${baseGuardrail} You are a thorough, contextually aware thinker. Go beyond the obvious — surface angles, implications, and considerations the user may not have thought of. Aim for 300-400 words. Always complete every sentence and section you start. Never truncate your response mid-thought.`;
 
   try {
     const [claudeRes, openaiRes, geminiRes] = await Promise.allSettled([
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
             maxOutputTokens: 3000,
-            temperature: 0.9,
+            temperature: 1.0,
             stopSequences: [],
           },
         });
