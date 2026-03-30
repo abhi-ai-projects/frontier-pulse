@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
       (async () => {
         const model = gemini.getGenerativeModel({
-          model: "gemini-2.5-flash",
+          model: "gemini-2.5-pro",
           systemInstruction: geminiSystem,
         });
         const result = await model.generateContent({

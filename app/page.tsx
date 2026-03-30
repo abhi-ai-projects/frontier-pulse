@@ -55,7 +55,7 @@ const BEST_FOR: Record<string, string> = {
 const MODELS = [
   { key: "claude", label: "Claude Sonnet 4.6", shortLabel: "Claude",  maker: "Anthropic", desc: "Judgment-driven",      dot: "#ff9f6b", mono: "A" },
   { key: "openai", label: "GPT-5.4",           shortLabel: "GPT-5.4", maker: "OpenAI",    desc: "Structured & precise", dot: "#63d68d", mono: "G" },
-  { key: "gemini", label: "Gemini 2.5 Flash",  shortLabel: "Gemini",  maker: "Google",    desc: "Contextually thorough", dot: "#6ab4f5", mono: "G" },
+  { key: "gemini", label: "Gemini 2.5 Pro",  shortLabel: "Gemini",  maker: "Google",    desc: "Contextually thorough", dot: "#6ab4f5", mono: "G" },
 ];
 
 const FREE_LIMIT = 3;
@@ -139,7 +139,7 @@ export default function Home() {
             Same prompt. Three minds.
           </h1>
           <p style={{ fontSize:14, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.06em" }}>
-            Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 2.5 Flash
+            Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 2.5 Pro
           </p>
         </section>
 
