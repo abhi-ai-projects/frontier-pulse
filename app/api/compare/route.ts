@@ -43,18 +43,14 @@ export async function POST(req: NextRequest) {
 
   const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
 
-  const claudeSystem = `${systemContext} ${baseGuardrail} You are a trusted advisor. Respond immediately and directly to what the user gave you — never ask for more information, never explain what you could help with, never list capabilities. If the input is brief, make smart assumptions and produce a complete response. Do not default to email format unless the user says "email". No Subject lines, no Dear/Hi, no sign-offs unless explicitly requested. Deliver the actual work product in 300-400 words.`;
-
-  const openaiSystem = `${systemContext} ${baseGuardrail} You are a sharp professional. Respond immediately and directly — never ask for clarification, never list what you can do. If the input is brief, make smart assumptions and produce a complete response. Do not default to email format unless the user says "email". No Subject lines, no Dear/Hi, no sign-offs unless explicitly requested. Deliver a clean, structured response in 250-350 words.`;
-
-  const geminiSystem = `${systemContext} ${baseGuardrail} You are a thorough thinker. Respond immediately and directly to what the user gave you — never ask for clarification or list capabilities. If the input is brief, make smart assumptions and produce a complete, substantive response. Do not default to email format unless the user says "email". No Subject lines, no Dear/Hi, no sign-offs unless explicitly requested. Aim for 300-400 words and always complete every sentence you start.`;
+  const unifiedSystem = `${systemContext} ${baseGuardrail} Respond immediately and directly to what the user gave you. Do not ask for clarification, do not explain what you could help with, and do not list your capabilities. If the input is brief, make smart assumptions and produce a complete response. Do not default to email format unless the user explicitly says "email". No Subject lines, no salutations, no sign-offs unless explicitly requested. Aim for 300-350 words.`;
 
   try {
     const [claudeRes, openaiRes, geminiRes] = await Promise.allSettled([
       anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 1000,
-        system: claudeSystem,
+        system: unifiedSystem,
         messages: [{ role: "user", content: prompt }],
       }),
 
@@ -62,7 +58,7 @@ export async function POST(req: NextRequest) {
         model: "gpt-5.4",
         max_completion_tokens: 8000,
         messages: [
-          { role: "system", content: openaiSystem },
+          { role: "system", content: unifiedSystem },
           { role: "user", content: prompt },
         ],
       }),
@@ -71,7 +67,7 @@ export async function POST(req: NextRequest) {
         const callGemini = async (modelName: string) => {
           const model = gemini.getGenerativeModel({
             model: modelName,
-            systemInstruction: geminiSystem,
+            systemInstruction: unifiedSystem,
           });
           const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -123,10 +119,47 @@ export async function POST(req: NextRequest) {
         ? (geminiRes.value as { text: string }).text
         : getError(geminiRes, "Gemini");
 
+    // Generate honest, response-specific insights using the actual outputs
+    let insights = { claude: "", openai: "", gemini: "", bestFor: "" };
+    try {
+      const insightsMsg = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 600,
+        system: `You are an impartial evaluator of AI model responses. You are Claude — one of the models being evaluated — so you must be especially careful not to favour yourself. Judge all three responses with equal rigour. Be specific and honest: name what each response actually did, what it got right, and what it missed or handled weakly. Do not be generically complimentary. Return ONLY a valid JSON object with no markdown, no code fences, no extra text.`,
+        messages: [{
+          role: "user",
+          content: `Task context the user selected: "${systemContext}"
+User's prompt: "${prompt}"
+
+--- Claude Sonnet 4.6 response ---
+${claudeText || "Unavailable"}
+
+--- GPT-5.4 response ---
+${openaiText || "Unavailable"}
+
+--- Gemini 2.5 Pro response ---
+${geminiText || "Unavailable"}
+
+Return a JSON object in exactly this format (all values are short strings, 1-2 sentences max):
+{
+  "claude": "Specific honest observation about what Claude's response actually did in this case",
+  "openai": "Specific honest observation about what GPT-5.4's response actually did in this case",
+  "gemini": "Specific honest observation about what Gemini's response actually did in this case",
+  "bestFor": "Claude if [specific reason grounded in this response] · GPT-5.4 if [specific reason] · Gemini if [specific reason]"
+}`,
+        }],
+      });
+      const raw = insightsMsg.content[0].type === "text" ? insightsMsg.content[0].text.trim() : "{}";
+      insights = JSON.parse(raw);
+    } catch (e) {
+      console.error("Insights generation failed:", e);
+    }
+
     return NextResponse.json({
       claude: claudeText,
       openai: openaiText,
       gemini: geminiText,
+      insights,
     });
   } catch (error) {
     console.error("API error:", error);

@@ -28,34 +28,11 @@ const TASK_CATEGORIES = [
   },
 ];
 
-const MODEL_INSIGHTS: Record<string, Record<string, string>> = {
-  write: {
-    claude:  "Led with tone and emotional intelligence — built for trust, not just clarity.",
-    openai:  "Optimized for structure and immediate usability — ready to send with minimal edits.",
-    gemini:  "Went broadest in scope — covered angles the others didn't, at the cost of concision.",
-  },
-  analyze: {
-    claude:  "Surfaced the judgment calls and strategic implications — thinks like an advisor.",
-    openai:  "Organized for scanning and action — strong on completeness and decision support.",
-    gemini:  "Went deepest on context and nuance — best for understanding, not just summarizing.",
-  },
-  decide: {
-    claude:  "Named the tradeoffs others avoided — most willing to take a position.",
-    openai:  "Framed the decision as a structured problem — clear criteria, clear recommendation.",
-    gemini:  "Explored the widest range of considerations — best if you're still in discovery mode.",
-  },
-};
-
-const BEST_FOR: Record<string, string> = {
-  write:   "Claude if tone matters most · GPT-5.4 if you need to send it fast · Gemini if you want broader coverage",
-  analyze: "Claude if you need a recommendation · GPT-5.4 if you need it scannable · Gemini if depth matters",
-  decide:  "Claude if you want a direct opinion · GPT-5.4 if you want a framework · Gemini if you're still exploring",
-};
 
 const MODELS = [
-  { key: "claude", label: "Claude Sonnet 4.6", shortLabel: "Claude",  maker: "Anthropic", desc: "Judgment-driven",      dot: "#ff9f6b", mono: "A" },
-  { key: "openai", label: "GPT-5.4",           shortLabel: "GPT-5.4", maker: "OpenAI",    desc: "Structured & precise", dot: "#63d68d", mono: "G" },
-  { key: "gemini", label: "Gemini 2.5 Pro",  shortLabel: "Gemini",  maker: "Google",    desc: "Contextually thorough", dot: "#6ab4f5", mono: "G" },
+  { key: "claude", label: "Claude Sonnet 4.6", shortLabel: "Claude",  maker: "Anthropic", desc: "Latest generation",  dot: "#ff9f6b", mono: "A" },
+  { key: "openai", label: "GPT-5.4",           shortLabel: "GPT-5.4", maker: "OpenAI",    desc: "Latest generation",  dot: "#63d68d", mono: "G" },
+  { key: "gemini", label: "Gemini 2.5 Pro",    shortLabel: "Gemini",  maker: "Google",    desc: "Latest generation",  dot: "#6ab4f5", mono: "G" },
 ];
 
 const FREE_LIMIT = 3;
@@ -81,6 +58,7 @@ export default function Home() {
   const [task,      setTask]            = useState(TASK_CATEGORIES[0]);
   const [prompt,    setPrompt]          = useState("");
   const [responses, setResponses]       = useState<Record<string,string>>({});
+  const [insights,  setInsights]        = useState<{claude:string,openai:string,gemini:string,bestFor:string}|null>(null);
   const [loading,   setLoading]         = useState(false);
   const [error,     setError]           = useState("");
   const [gated,     setGated]           = useState(false);
@@ -91,13 +69,14 @@ export default function Home() {
   const compare = async () => {
     if (!prompt.trim()) return;
     if (getAttempts() >= FREE_LIMIT) { setGated(true); return; }
-    setLoading(true); setError(""); setResponses({});
+    setLoading(true); setError(""); setResponses({}); setInsights(null);
     try {
       const res  = await fetch("/api/compare", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt, systemContext: task.systemContext }) });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
       setAttempts(incrementAttempts());
       setResponses({ claude: data.claude, openai: data.openai, gemini: data.gemini });
+      setInsights(data.insights || null);
     } catch { setError("Network error — check your connection."); }
     finally  { setLoading(false); }
   };
@@ -166,7 +145,7 @@ export default function Home() {
             <div style={{ display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:32,scrollbarWidth:"none" }}>
               {TASK_CATEGORIES.map(t => (
                 <button key={t.id} className={`task-chip${task.id===t.id?" active":""}`}
-                  onClick={()=>{ setTask(t); setPrompt(""); setResponses({}); setError(""); }}>
+                  onClick={()=>{ setTask(t); setPrompt(""); setResponses({}); setInsights(null); setError(""); }}>
                   {t.label}
                 </button>
               ))}
@@ -258,8 +237,8 @@ export default function Home() {
                       <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>
                         {m.label} · What just happened
                       </div>
-                      <p style={{ fontSize:12, color:"#6e6e73", lineHeight:1.6, fontFamily:"'Figtree',sans-serif" }}>
-                        {MODEL_INSIGHTS[task.id]?.[m.key] || ""}
+                      <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.6, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
+                        {insights ? insights[m.key as keyof typeof insights] : "Analysing response…"}
                       </p>
                     </div>
                   ))}
@@ -269,8 +248,8 @@ export default function Home() {
                   <div style={{ fontSize:10, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", paddingTop:2 }}>
                     Best for →
                   </div>
-                  <p style={{ fontSize:12, color:"#6e6e73", lineHeight:1.6, fontFamily:"'Figtree',sans-serif" }}>
-                    {BEST_FOR[task.id] || ""}
+                  <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.6, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
+                    {insights ? insights.bestFor : "Analysing responses…"}
                   </p>
                 </div>
               </div>
