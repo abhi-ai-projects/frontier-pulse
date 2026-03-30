@@ -53,9 +53,9 @@ const BEST_FOR: Record<string, string> = {
 };
 
 const MODELS = [
-  { key: "claude", label: "Claude",  maker: "Anthropic", desc: "Judgment-driven",     dot: "#ff9f6b" },
-  { key: "openai", label: "GPT-5.4", maker: "OpenAI",    desc: "Structured & precise", dot: "#63d68d" },
-  { key: "gemini", label: "Gemini",  maker: "Google",    desc: "Contextually thorough", dot: "#6ab4f5" },
+  { key: "claude", label: "Claude Sonnet 4.6", shortLabel: "Claude",  maker: "Anthropic", desc: "Judgment-driven",      dot: "#ff9f6b", mono: "A" },
+  { key: "openai", label: "GPT-5.4",           shortLabel: "GPT-5.4", maker: "OpenAI",    desc: "Structured & precise", dot: "#63d68d", mono: "G" },
+  { key: "gemini", label: "Gemini 2.5 Flash",  shortLabel: "Gemini",  maker: "Google",    desc: "Contextually thorough", dot: "#6ab4f5", mono: "G" },
 ];
 
 const FREE_LIMIT = 3;
@@ -117,7 +117,7 @@ export default function Home() {
         WebkitBackdropFilter: "blur(20px)",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}>
-        <span style={{ fontFamily:"'Sora',sans-serif", fontSize:15, fontWeight:600, letterSpacing:"-0.02em", color:"#f5f5f7" }}>
+        <span style={{ fontFamily:"'Sora',sans-serif", fontSize:18, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
           Frontier Pulse
         </span>
 <div />
@@ -139,7 +139,7 @@ export default function Home() {
             Same prompt. Three minds.
           </h1>
           <p style={{ fontSize:14, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.06em" }}>
-            Claude &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini
+            Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 2.5 Flash
           </p>
         </section>
 
@@ -207,9 +207,7 @@ export default function Home() {
                     {/* Card Header */}
                     <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18 }}>
                       <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                        <div style={{ width:8,height:8,borderRadius:"50%",background:m.dot,flexShrink:0,
-                          boxShadow: responses[m.key] ? `0 0 8px ${m.dot}` : "none",
-                          transition:"box-shadow 0.4s ease" }} />
+                        <div style={{ display:"none" }} />
                         <div>
                           <div style={{ fontFamily:"'Sora',sans-serif",fontSize:14,fontWeight:600,color:"#f5f5f7",lineHeight:1.2 }}>
                             {m.label}
