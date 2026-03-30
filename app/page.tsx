@@ -139,12 +139,11 @@ export default function Home() {
 
         {/* ── Hero ── */}
         <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 40px", maxWidth:680, margin:"0 auto" }}>
-          <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(28px,4vw,42px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
-            See how Claude, GPT-5.4 &amp; Gemini<br/>
-            <span style={{ color:"#6e6e73", fontWeight:400 }}>actually think — side by side.</span>
+          <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(32px,4.5vw,52px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
+            Same prompt. Three minds.
           </h1>
-          <p style={{ fontSize:14, color:"#3a3a3c", fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em" }}>
-            Write · Analyze · Decide — pick a mode, enter your prompt, see the difference.
+          <p style={{ fontSize:14, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.06em" }}>
+            Claude &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini
           </p>
         </section>
 
