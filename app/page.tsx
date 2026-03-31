@@ -8,6 +8,9 @@ type Insights = {
   claude: string; openai: string; gemini: string;
   bestFor: string;
   claudeApproach: string; openaiApproach: string; geminiApproach: string;
+  claudeRelevance: number; openaiRelevance: number; geminiRelevance: number;
+  claudeFaithfulness: number; openaiFaithfulness: number; geminiFaithfulness: number;
+  claudeSafety: number; openaiSafety: number; geminiSafety: number;
 };
 
 const TASK_CATEGORIES = [
@@ -132,6 +135,35 @@ export default function Home() {
       onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; }}>
       {label}
     </button>
+  );
+
+  // ─── Score helpers ────────────────────────────────────────────────────────
+  const scoreColor = (s: number) => s >= 80 ? "#63d68d" : s >= 55 ? "#f5a623" : "#ff6b6b";
+  const scoreLabel = (s: number) => s >= 80 ? "High" : s >= 55 ? "Medium" : "Low";
+  const safetyLabel = (s: number) => s >= 80 ? "Safe" : s >= 55 ? "Low Risk" : "Flagged";
+  const getScore = (model: string, metric: string): number =>
+    (insights as unknown as Record<string, number>)?.[`${model}${metric}`] ?? 0;
+
+  // ─── Eval row ─────────────────────────────────────────────────────────────
+  const EvalRow = ({ label, score, labelFn }: { label: string; score: number; labelFn: (s: number) => string }) => (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+      <span style={{ fontSize:10, letterSpacing:"0.09em", color:"#3a3a3c", textTransform:"uppercase", fontFamily:"'Sora',sans-serif" }}>
+        {label}
+      </span>
+      <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+        <span style={{ fontSize:14, fontWeight:700, color: insights ? scoreColor(score) : "#3a3a3c", fontFamily:"'Sora',sans-serif", letterSpacing:"-0.02em" }}>
+          {insights ? score : "—"}
+        </span>
+        {insights && (
+          <>
+            <span style={{ fontSize:10, color:"rgba(255,255,255,0.12)" }}>·</span>
+            <span style={{ fontSize:10, color: scoreColor(score), fontFamily:"'Figtree',sans-serif", letterSpacing:"0.02em" }}>
+              {labelFn(score)}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
   );
 
   // ─── Metric tile ──────────────────────────────────────────────────────────
@@ -425,8 +457,18 @@ export default function Home() {
                             />
                           </div>
 
+                          {/* Eval scores */}
+                          <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:14, marginBottom:16 }}>
+                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:8, fontFamily:"'Sora',sans-serif" }}>
+                              Eval Scores
+                            </div>
+                            <EvalRow label="Relevance"    score={getScore(m.key, "Relevance")}    labelFn={scoreLabel}  />
+                            <EvalRow label="Faithfulness" score={getScore(m.key, "Faithfulness")} labelFn={scoreLabel}  />
+                            <EvalRow label="Safety"       score={getScore(m.key, "Safety")}       labelFn={safetyLabel} />
+                          </div>
+
                           {/* Approach */}
-                          <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:16 }}>
+                          <div>
                             <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:6, fontFamily:"'Sora',sans-serif" }}>
                               Approach
                             </div>
