@@ -87,12 +87,17 @@ export default function Home() {
     setResponses({}); setInsights(null); setTiming({}); setUsage({}); setError("");
   };
 
+  const goToSection = (s: Section) => {
+    setSection(s);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const compare = async () => {
     if (!prompt.trim()) return;
     if (getAttempts() >= FREE_LIMIT) { setGated(true); return; }
     setLoading(true);
     resetComparison();
-    setSection("compare");
+    goToSection("compare");
     try {
       const res  = await fetch("/api/compare", {
         method: "POST",
@@ -121,7 +126,7 @@ export default function Home() {
   );
 
   const backBtn = (label: string, to: Section) => (
-    <button onClick={() => setSection(to)}
+    <button onClick={() => goToSection(to)}
       style={{ fontSize:12, color:"#6e6e73", background:"none", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.2s ease" }}
       onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.2)"; }}
       onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; }}>
@@ -179,7 +184,7 @@ export default function Home() {
                   margin:"0 auto", transition:"background 0.4s ease",
                 }} />
               )}
-              <button onClick={() => isAvailable && setSection(item.id)}
+              <button onClick={() => isAvailable && goToSection(item.id)}
                 style={{
                   display:"flex", flexDirection:"column", alignItems:"center", gap:5,
                   padding:"12px 0", width:"100%",
@@ -214,7 +219,7 @@ export default function Home() {
           const isActive    = section === item.id;
           const isAvailable = item.id === "prompt" || hasRes || loading;
           return (
-            <button key={item.id} onClick={() => isAvailable && setSection(item.id)}
+            <button key={item.id} onClick={() => isAvailable && goToSection(item.id)}
               style={{
                 display:"flex", flexDirection:"column", alignItems:"center", gap:2,
                 padding:"6px 24px", background:"none", border:"none",
@@ -364,7 +369,7 @@ export default function Home() {
                 {/* CTA to analysis */}
                 {hasRes && !loading && (
                   <div style={{ textAlign:"center", marginTop:44 }}>
-                    <button onClick={() => setSection("analysis")}
+                    <button onClick={() => goToSection("analysis")}
                       style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:980, padding:"11px 32px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Sora',sans-serif", color:"#f5f5f7", letterSpacing:"0.01em", transition:"all 0.25s ease" }}
                       onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
@@ -409,8 +414,10 @@ export default function Home() {
                               value={usage[m.key]?.output ? String(usage[m.key].output) : "—"}
                             />
                             <MetricTile
-                              label="Word Count"
-                              value={responses[m.key] ? String(wordCount(responses[m.key])) : "—"}
+                              label="Expansion"
+                              value={usage[m.key]?.input && usage[m.key]?.output
+                                ? `${(usage[m.key].output / usage[m.key].input).toFixed(1)}×`
+                                : "—"}
                             />
                             <MetricTile
                               label="Input Tokens"
@@ -431,24 +438,29 @@ export default function Home() {
                       ))}
                     </div>
 
-                    {/* ── What just happened ── */}
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:16 }}>
-                      {MODELS.map(m => (
-                        <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12 }}>
-                          <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7 }}>
-                            {m.label} · What just happened
+                    {/* ── Model Output Summary ── */}
+                    <div style={{ marginBottom:12 }}>
+                      <div style={{ fontSize:10, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, paddingBottom:12 }}>
+                        Model Output Summary
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16 }}>
+                        {MODELS.map(m => (
+                          <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12 }}>
+                            <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7 }}>
+                              {m.label}
+                            </div>
+                            <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
+                              {getInsight(m.key) || "Analysing response…"}
+                            </p>
                           </div>
-                          <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
-                            {getInsight(m.key) || "Analysing response…"}
-                          </p>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
 
                     {/* ── Best for ── */}
                     <div style={{ padding:"16px 20px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, display:"flex", alignItems:"flex-start", gap:14 }}>
                       <div style={{ fontSize:10, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", paddingTop:1 }}>
-                        Best for →
+                        The Verdict →
                       </div>
                       <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
                         {insights?.bestFor || "Analysing responses…"}
@@ -462,7 +474,7 @@ export default function Home() {
                     <div style={{ fontSize:11, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:16 }}>
                       Run a comparison first
                     </div>
-                    <button onClick={() => setSection("prompt")}
+                    <button onClick={() => goToSection("prompt")}
                       style={{ fontSize:12, color:"#6e6e73", background:"none", border:"none", cursor:"pointer", fontFamily:"'Figtree',sans-serif", textDecoration:"underline" }}>
                       Go to prompt →
                     </button>
