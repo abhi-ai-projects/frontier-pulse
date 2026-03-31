@@ -63,8 +63,12 @@ function stripMarkdown(t: string) {
     .replace(/^[-*]\s+/gm,"• ").replace(/^(\d+)\.\s+/gm,"$1. ")
     .replace(/\|.+\|/g,"").replace(/---/g,"").replace(/\n{3,}/g,"\n\n").trim();
 }
-function wordCount(text: string) {
-  return text.trim().split(/\s+/).filter(Boolean).length;
+function estReadTime(outputTokens: number): string {
+  if (!outputTokens) return "—";
+  const words = outputTokens * 0.75;   // ~0.75 words per token
+  const mins  = words / 200;           // 200 wpm average reading speed
+  if (mins < 1) return `~${Math.round(mins * 60)}s read`;
+  return `~${Math.round(mins)}m read`;
 }
 
 export default function Home() {
@@ -446,10 +450,8 @@ export default function Home() {
                               value={usage[m.key]?.output ? String(usage[m.key].output) : "—"}
                             />
                             <MetricTile
-                              label="Expansion"
-                              value={usage[m.key]?.input && usage[m.key]?.output
-                                ? `${(usage[m.key].output / usage[m.key].input).toFixed(1)}×`
-                                : "—"}
+                              label="Est. Read"
+                              value={estReadTime(usage[m.key]?.output ?? 0)}
                             />
                             <MetricTile
                               label="Input Tokens"

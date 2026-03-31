@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     };
     try {
       const insightsMsg = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 1200,
         system: `You are an impartial evaluator of AI model responses. You are Claude — one of the models being evaluated — so be especially careful not to favour yourself. Judge all three responses with equal rigour. Be specific and honest: name what each response actually did, what it got right, and what it missed or handled weakly. Do not be generically complimentary. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.`,
         messages: [{
