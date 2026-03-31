@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     };
 
     type CR = { msg: Anthropic.Message; ms: number };
-    type OR = { completion: Awaited<ReturnType<typeof openai.chat.completions.create>>; ms: number };
+    type OR = { completion: OpenAI.Chat.Completions.ChatCompletion; ms: number };
     type GR = { text: string; usageMeta: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined; ms: number };
 
     const claudeText = claudeRes.status === "fulfilled"
