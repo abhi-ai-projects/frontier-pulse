@@ -370,8 +370,8 @@ export default function Home() {
                     {MODELS.map((m, i) => (
                       <div key={m.key} className={`model-card${responses[m.key] ? " has-response" : ""}`} style={{
                         animationDelay:`${i * 0.1}s`,
-                        borderTop:`2px solid ${m.dot}`,
-                        borderLeft:`3px solid ${m.dot}44`,
+                        boxShadow:`inset 0 2px 0 ${m.dot}88`,
+                        background:`linear-gradient(170deg, ${m.dot}0f 0%, var(--surface) 32%)`,
                       }}>
 
                         {/* Card header */}
@@ -462,10 +462,9 @@ export default function Home() {
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:28 }}>
                       {MODELS.map(m => (
                         <div key={m.key} style={{
-                          background:"#1c1c1e",
+                          background:`linear-gradient(170deg, ${m.dot}0f 0%, #1c1c1e 32%)`,
                           border:"1px solid rgba(255,255,255,0.08)",
-                          borderTop:`2px solid ${m.dot}`,
-                          borderLeft:`3px solid ${m.dot}44`,
+                          boxShadow:`inset 0 2px 0 ${m.dot}77`,
                           borderRadius:16,
                           padding:"22px 24px",
                         }}>
@@ -515,7 +514,7 @@ export default function Home() {
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16 }}>
                         {MODELS.map(m => (
-                          <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderTop:`1px solid ${m.dot}55`, borderRadius:12 }}>
+                          <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", boxShadow:`inset 0 1px 0 ${m.dot}55`, borderRadius:12 }}>
                             <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7, fontWeight:600 }}>
                               {m.label}
                             </div>

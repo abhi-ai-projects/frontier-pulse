@@ -70,7 +70,12 @@ export async function POST(req: NextRequest) {
           const model = gemini.getGenerativeModel({ model: modelName, systemInstruction: unifiedSystem });
           const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 1000, temperature: 1.0, stopSequences: [] },
+            // maxOutputTokens must be generous for Gemini 2.5 Pro: thinking tokens count
+            // against this budget. At 1000 the model exhausts the limit before writing a
+            // word. thinkingBudget:1024 bounds the thinking overhead so the response always
+            // has room. Cast to any because thinkingConfig is not yet in the SDK typedefs.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            generationConfig: { maxOutputTokens: 2000, temperature: 1.0, stopSequences: [], thinkingConfig: { thinkingBudget: 1024 } } as any,
           });
           const candidate = result.response.candidates?.[0];
           const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();
