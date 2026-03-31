@@ -4,7 +4,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import { NextRequest, NextResponse } from "next/server";
 
-const rateLimiter = new RateLimiterMemory({ points: 10, duration: 60 * 60 });
+// NOTE: bumped for overnight batch test — revert to points:10 after run completes
+const rateLimiter = new RateLimiterMemory({ points: 600, duration: 60 * 60 });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
