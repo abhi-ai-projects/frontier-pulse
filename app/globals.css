@@ -171,3 +171,35 @@ body {
 .prose-apple th { background: var(--surface-2); color: var(--gray-1); font-weight: 500; }
 
 ::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── Layout ── */
+.main-content { margin-left: 72px; }
+
+/* ── Left sidebar nav (desktop) ── */
+.side-nav-desktop {
+  display: flex;
+}
+
+/* ── Mobile bottom nav ── */
+.side-nav-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .side-nav-desktop { display: none !important; }
+  .main-content     { margin-left: 0; padding-bottom: 60px; }
+
+  .side-nav-mobile {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 52px;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    z-index: 50;
+    align-items: center;
+    justify-content: space-around;
+  }
+}

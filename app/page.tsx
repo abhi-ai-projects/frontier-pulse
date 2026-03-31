@@ -2,40 +2,48 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
-type Tab = "task";
+type Section = "prompt" | "compare" | "analysis";
+
+type Insights = {
+  claude: string; openai: string; gemini: string;
+  bestFor: string;
+  claudeApproach: string; openaiApproach: string; geminiApproach: string;
+};
 
 const TASK_CATEGORIES = [
   {
     id: "write",
     label: "Write",
-    icon: "✦",
     placeholder: "What do you need to communicate, and to whom? E.g. 'Reply to an enterprise client whose AI project is 3 weeks delayed — they have an exec review next Friday' or 'Pitch moving our team to Claude API to our CTO' or 'Announce a reorg to my team of 12'",
     systemContext: "You are a professional communication expert. Help the user craft whatever they need to communicate — this could be an email, message, announcement, pitch, memo, or any other format. Follow the user's lead on format and context. Do not default to email unless the user specifies it.",
   },
   {
     id: "analyze",
     label: "Analyze",
-    icon: "✦",
     placeholder: "What situation, market, or decision do you want to understand better? E.g. 'Compare Anthropic vs OpenAI for enterprise API customers' or 'Assess risks of adopting a third-party LLM API in a HIPAA environment' or 'Summarize this pilot result for our CTO'",
     systemContext: "You are a senior strategy and analysis expert. Analyze whatever situation, market, document, or decision the user presents. Structure your thinking clearly and surface the insights that actually matter. Follow the user's lead on scope and depth.",
   },
   {
     id: "decide",
     label: "Decide",
-    icon: "✦",
     placeholder: "What are you weighing up? E.g. 'Should we standardize on one AI model or run Claude and GPT in parallel?' or 'I have two job offers — help me think through the tradeoffs' or 'Should we delay our product launch by 6 weeks?'",
     systemContext: "You are a trusted advisor helping someone think through a decision. Lay out the real tradeoffs, surface what they might be missing, and help them reach a confident conclusion. Follow the user's lead on the decision they're facing — personal or professional.",
   },
 ];
 
-
 const MODELS = [
-  { key: "claude", label: "Claude Sonnet 4.6", shortLabel: "Claude",  maker: "Anthropic", desc: "Latest generation",  dot: "#ff9f6b", mono: "A" },
-  { key: "openai", label: "GPT-5.4",           shortLabel: "GPT-5.4", maker: "OpenAI",    desc: "Latest generation",  dot: "#63d68d", mono: "G" },
-  { key: "gemini", label: "Gemini 2.5 Pro",    shortLabel: "Gemini",  maker: "Google",    desc: "Latest generation",  dot: "#6ab4f5", mono: "G" },
+  { key: "claude", label: "Claude Sonnet 4.6", maker: "Anthropic", dot: "#ff9f6b" },
+  { key: "openai", label: "GPT-5.4",           maker: "OpenAI",    dot: "#63d68d" },
+  { key: "gemini", label: "Gemini 2.5 Pro",    maker: "Google",    dot: "#6ab4f5" },
 ];
 
-const FREE_LIMIT = 3;
+const NAV_ITEMS: { id: Section; num: string; label: string }[] = [
+  { id: "prompt",   num: "01", label: "PROMPT"  },
+  { id: "compare",  num: "02", label: "COMPARE" },
+  { id: "analysis", num: "03", label: "ANALYSIS"},
+];
+
+const FREE_LIMIT  = 3;
 const STORAGE_KEY = "fp_attempts";
 
 function getAttempts() {
@@ -52,220 +60,418 @@ function stripMarkdown(t: string) {
     .replace(/^[-*]\s+/gm,"• ").replace(/^(\d+)\.\s+/gm,"$1. ")
     .replace(/\|.+\|/g,"").replace(/---/g,"").replace(/\n{3,}/g,"\n\n").trim();
 }
+function wordCount(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
 
 export default function Home() {
-  const [activeTab, setActiveTab]       = useState<Tab>("task");
-  const [task,      setTask]            = useState(TASK_CATEGORIES[0]);
-  const [prompt,    setPrompt]          = useState("");
-  const [responses, setResponses]       = useState<Record<string,string>>({});
-  const [insights,  setInsights]        = useState<{claude:string,openai:string,gemini:string,bestFor:string}|null>(null);
-  const [loading,   setLoading]         = useState(false);
-  const [error,     setError]           = useState("");
-  const [gated,     setGated]           = useState(false);
-  const [attempts,  setAttempts]        = useState(getAttempts());
+  const [section,  setSection]  = useState<Section>("prompt");
+  const [task,     setTask]     = useState(TASK_CATEGORIES[0]);
+  const [prompt,   setPrompt]   = useState("");
+  const [responses,setResponses]= useState<Record<string,string>>({});
+  const [insights, setInsights] = useState<Insights | null>(null);
+  const [timing,   setTiming]   = useState<Record<string,number>>({});
+  const [usage,    setUsage]    = useState<Record<string,{input:number;output:number}>>({});
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
+  const [gated,    setGated]    = useState(false);
+  const [attempts, setAttempts] = useState(getAttempts());
 
-  const switchTab = (t: Tab) => { setActiveTab(t); };
+  const hasRes    = Object.keys(responses).length > 0;
+  const remaining = Math.max(0, FREE_LIMIT - attempts);
+
+  const getInsight  = (key: string) => insights?.[key as keyof Insights] as string ?? "";
+  const getApproach = (key: string) => insights?.[`${key}Approach` as keyof Insights] as string ?? "";
+
+  const resetComparison = () => {
+    setResponses({}); setInsights(null); setTiming({}); setUsage({}); setError("");
+  };
 
   const compare = async () => {
     if (!prompt.trim()) return;
     if (getAttempts() >= FREE_LIMIT) { setGated(true); return; }
-    setLoading(true); setError(""); setResponses({}); setInsights(null);
+    setLoading(true);
+    resetComparison();
+    setSection("compare");
     try {
-      const res  = await fetch("/api/compare", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt, systemContext: task.systemContext }) });
+      const res  = await fetch("/api/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, systemContext: task.systemContext }),
+      });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
       setAttempts(incrementAttempts());
       setResponses({ claude: data.claude, openai: data.openai, gemini: data.gemini });
-      setInsights(data.insights || null);
+      setInsights(data.insights  || null);
+      setTiming(data.timing      || {});
+      setUsage(data.usage        || {});
     } catch { setError("Network error — check your connection."); }
-    finally  { setLoading(false); }
+    finally   { setLoading(false); }
   };
 
-  const remaining = Math.max(0, FREE_LIMIT - attempts);
-  const hasRes    = Object.keys(responses).length > 0;
+  // ─── Shared styles ────────────────────────────────────────────────────────
+  const sectionHeader = (title: string, subtitle: string) => (
+    <div style={{ padding: "40px 0 28px" }}>
+      <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:22, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:6 }}>
+        {title}
+      </h2>
+      <p style={{ fontSize:12, color:"#6e6e73", fontFamily:"'Figtree',sans-serif" }}>{subtitle}</p>
+    </div>
+  );
+
+  const backBtn = (label: string, to: Section) => (
+    <button onClick={() => setSection(to)}
+      style={{ fontSize:12, color:"#6e6e73", background:"none", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.2s ease" }}
+      onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.2)"; }}
+      onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; }}>
+      {label}
+    </button>
+  );
+
+  // ─── Metric tile ──────────────────────────────────────────────────────────
+  const MetricTile = ({ label, value }: { label: string; value: string }) => (
+    <div>
+      <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:5, fontFamily:"'Sora',sans-serif" }}>
+        {label}
+      </div>
+      <div style={{ fontSize:22, fontWeight:700, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"-0.03em", lineHeight:1 }}>
+        {value}
+      </div>
+    </div>
+  );
 
   return (
     <>
-      {/* ── Floating Nav ── */}
+      {/* ── Floating Top Nav ── */}
       <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "12px 32px",
-        background: "rgba(0,0,0,0.72)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        position:"fixed", top:0, left:0, right:0, zIndex:100,
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        padding:"12px 32px",
+        background:"rgba(0,0,0,0.72)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)",
+        borderBottom:"1px solid rgba(255,255,255,0.05)",
       }}>
         <span style={{ fontFamily:"'Sora',sans-serif", fontSize:18, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
           Frontier Pulse
         </span>
-<div />
         <div style={{ width:120, display:"flex", justifyContent:"flex-end" }}>
           {attempts > 0 && !gated && (
-            <span style={{ fontSize:11, color:"#6e6e73", fontFamily:"'Sora',sans-serif" }}>
-              {remaining} left
-            </span>
+            <span style={{ fontSize:11, color:"#6e6e73", fontFamily:"'Sora',sans-serif" }}>{remaining} left</span>
           )}
         </div>
       </nav>
 
+      {/* ── Left Sidebar Nav (desktop) ── */}
+      <aside className="side-nav-desktop" style={{
+        position:"fixed", top:56, left:0, bottom:0, width:72,
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+        borderRight:"1px solid rgba(255,255,255,0.05)", zIndex:50, background:"#000",
+      }}>
+        {NAV_ITEMS.map((item, i) => {
+          const isActive    = section === item.id;
+          const isAvailable = item.id === "prompt" || hasRes || loading;
+          return (
+            <div key={item.id} style={{ display:"flex", flexDirection:"column", alignItems:"center", width:"100%" }}>
+              {i > 0 && (
+                <div style={{
+                  width:1, height:32,
+                  background: isAvailable ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)",
+                  margin:"0 auto", transition:"background 0.4s ease",
+                }} />
+              )}
+              <button onClick={() => isAvailable && setSection(item.id)}
+                style={{
+                  display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+                  padding:"12px 0", width:"100%",
+                  background:"none", border:"none", cursor: isAvailable ? "pointer" : "default",
+                  opacity: isAvailable ? 1 : 0.18, transition:"opacity 0.4s ease",
+                }}>
+                <div style={{
+                  width:7, height:7, borderRadius:"50%",
+                  background: isActive ? "#f5f5f7" : "rgba(255,255,255,0.2)",
+                  boxShadow: isActive ? "0 0 10px rgba(245,245,247,0.55)" : "none",
+                  transition:"all 0.3s ease",
+                }} />
+                <span style={{
+                  fontSize:9, letterSpacing:"0.14em", fontFamily:"'Sora',sans-serif",
+                  color: isActive ? "#f5f5f7" : "rgba(255,255,255,0.28)",
+                  fontWeight: isActive ? 700 : 400, transition:"all 0.3s ease",
+                }}>{item.num}</span>
+                <span style={{
+                  fontSize:7, letterSpacing:"0.1em", fontFamily:"'Sora',sans-serif",
+                  color: isActive ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.15)",
+                  transition:"all 0.3s ease",
+                }}>{item.label}</span>
+              </button>
+            </div>
+          );
+        })}
+      </aside>
+
+      {/* ── Mobile Bottom Nav ── */}
+      <nav className="side-nav-mobile">
+        {NAV_ITEMS.map(item => {
+          const isActive    = section === item.id;
+          const isAvailable = item.id === "prompt" || hasRes || loading;
+          return (
+            <button key={item.id} onClick={() => isAvailable && setSection(item.id)}
+              style={{
+                display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                padding:"6px 24px", background:"none", border:"none",
+                cursor: isAvailable ? "pointer" : "default", opacity: isAvailable ? 1 : 0.2,
+              }}>
+              <span style={{ fontSize:10, letterSpacing:"0.1em", fontFamily:"'Sora',sans-serif", color: isActive ? "#f5f5f7" : "#6e6e73", fontWeight: isActive ? 600 : 400 }}>
+                {item.num}
+              </span>
+              <span style={{ fontSize:8, letterSpacing:"0.08em", fontFamily:"'Sora',sans-serif", color: isActive ? "rgba(255,255,255,0.5)" : "#3a3a3c" }}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+
       {/* ── Main ── */}
-      <main style={{ paddingTop:56, minHeight:"100vh", background:"#000" }}>
-
-        {/* ── Hero ── */}
-        <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 40px", maxWidth:680, margin:"0 auto" }}>
-          <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(22px,2.8vw,36px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
-            Same prompt. Three minds.
-          </h1>
-          <p style={{ fontSize:14, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.06em" }}>
-            Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 2.5 Pro
-          </p>
-        </section>
-
-        {/* ── Content ── */}
+      <main className="main-content" style={{ paddingTop:56, minHeight:"100vh", background:"#000" }}>
         <div style={{ maxWidth:1080, margin:"0 auto", padding:"0 24px 100px", position:"relative" }}>
 
-          {/* TASK TAB */}
-          <div className={`section-transition ${activeTab==="task" ? "section-visible" : "section-hidden"}`}>
-
-            {/* Gate */}
-            {gated && (
-              <div style={{ background:"#1c1c1e", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20, padding:"48px 40px", textAlign:"center", marginBottom:40, maxWidth:480, margin:"0 auto 40px" }}>
-                <div style={{ width:44,height:44,borderRadius:"50%",background:"rgba(0,113,227,0.15)",border:"1px solid rgba(0,113,227,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:20 }}>⊕</div>
-                <h2 style={{ fontFamily:"'Sora',sans-serif",fontSize:20,fontWeight:600,marginBottom:8 }}>You've used 3 free comparisons</h2>
-                <p style={{ color:"#6e6e73",fontSize:14,marginBottom:28,lineHeight:1.6 }}>Sign in with Google to keep going — no payment needed.</p>
-                <button style={{ background:"#0071e3",color:"#fff",border:"none",borderRadius:980,padding:"12px 28px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Figtree',sans-serif" }}>
-                  Continue with Google
-                </button>
-                <p style={{ marginTop:14,fontSize:11,color:"#3a3a3c" }}>Your content is never stored.</p>
-              </div>
-            )}
-
-            {/* Task Chips */}
-            <div style={{ display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:32,scrollbarWidth:"none" }}>
-              {TASK_CATEGORIES.map(t => (
-                <button key={t.id} className={`task-chip${task.id===t.id?" active":""}`}
-                  onClick={()=>{ setTask(t); setPrompt(""); setResponses({}); setInsights(null); setError(""); }}>
-                  {t.label}
-                </button>
-              ))}
+          {/* ── Freemium Gate ── */}
+          {gated && (
+            <div style={{
+              background:"#1c1c1e", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20,
+              padding:"48px 40px", textAlign:"center", maxWidth:480, margin:"40px auto",
+            }}>
+              <div style={{ width:44,height:44,borderRadius:"50%",background:"rgba(0,113,227,0.15)",border:"1px solid rgba(0,113,227,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:20 }}>⊕</div>
+              <h2 style={{ fontFamily:"'Sora',sans-serif",fontSize:20,fontWeight:600,marginBottom:8 }}>You've used 3 free comparisons</h2>
+              <p style={{ color:"#6e6e73",fontSize:14,marginBottom:28,lineHeight:1.6 }}>Sign in with Google to keep going — no payment needed.</p>
+              <button style={{ background:"#0071e3",color:"#fff",border:"none",borderRadius:980,padding:"12px 28px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Figtree',sans-serif" }}>
+                Continue with Google
+              </button>
+              <p style={{ marginTop:14,fontSize:11,color:"#3a3a3c" }}>Your content is never stored.</p>
             </div>
+          )}
 
-            {/* Input Area */}
-            <div style={{ background:"#1c1c1e", borderRadius:20, border:"1px solid rgba(255,255,255,0.08)", overflow:"hidden", marginBottom:12, transition:"border 0.2s ease" }}>
-              <textarea
-                value={prompt}
-                onChange={e=>setPrompt(e.target.value)}
-                placeholder={task.placeholder}
-                rows={5}
-                onKeyDown={e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)) compare(); }}
-                style={{ width:"100%", padding:"20px 22px 12px", background:"transparent", border:"none", outline:"none", color:"#f5f5f7", fontSize:15, fontFamily:"'Figtree',sans-serif", lineHeight:1.65, resize:"none", fontWeight:400 }}
-              />
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 16px 16px 22px" }}>
-                <span style={{ fontSize:11,color:"#3a3a3c",fontFamily:"'Sora',sans-serif" }}>⌘ Return to compare</span>
-                <button className="compare-btn" onClick={compare} disabled={loading||!prompt.trim()||gated}
-                  style={{ width:"auto",padding:"10px 22px",fontSize:14 }}>
-                  {loading ? "Comparing..." : "Compare →"}
-                </button>
-              </div>
-            </div>
+          {/* ── Sections container ── */}
+          {!gated && (
+            <div style={{ position:"relative" }}>
 
-            {error && <p style={{ fontSize:13,color:"#ff6b6b",marginBottom:16 }}>{error}</p>}
+              {/* ════════════════════════════════════
+                  SECTION 1 — PROMPT
+              ════════════════════════════════════ */}
+              <div className={`section-transition ${section === "prompt" ? "section-visible" : "section-hidden"}`}>
 
-            <p style={{ fontSize:11,color:"#3a3a3c",marginBottom:40,fontFamily:"'Sora',sans-serif",letterSpacing:"0.01em" }}>
-              Sent to Anthropic, OpenAI &amp; Google APIs. Do not include personal or confidential information.
-            </p>
+                <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 40px", maxWidth:680, margin:"0 auto" }}>
+                  <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(22px,2.8vw,36px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
+                    Same prompt. Three minds.
+                  </h1>
+                  <p style={{ fontSize:14, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.06em" }}>
+                    Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 2.5 Pro
+                  </p>
+                </section>
 
-            {/* Response Cards */}
-            {(loading || hasRes) && (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16 }}>
-                {MODELS.map((m,i)=>(
-                  <div key={m.key} className={`model-card${responses[m.key]?" has-response":""}`}
-                    style={{ animationDelay:`${i*0.1}s` }}>
-
-                    {/* Card Header */}
-                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18 }}>
-                      <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                        <div style={{ display:"none" }} />
-                        <div>
-                          <div style={{ fontFamily:"'Sora',sans-serif",fontSize:14,fontWeight:600,color:"#f5f5f7",lineHeight:1.2 }}>
-                            {m.label}
-                          </div>
-                          <div style={{ fontSize:11,color:"#6e6e73",marginTop:2 }}>{m.maker} · {m.desc}</div>
-                        </div>
-                      </div>
-                      {responses[m.key] && (
-                        <button onClick={()=>navigator.clipboard.writeText(stripMarkdown(responses[m.key]))}
-                          style={{ fontSize:11,color:"#6e6e73",background:"rgba(255,255,255,0.06)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontFamily:"'Sora',sans-serif",transition:"all 0.15s" }}
-                          onMouseEnter={e=>{e.currentTarget.style.color="#f5f5f7";e.currentTarget.style.background="rgba(255,255,255,0.1)"}}
-                          onMouseLeave={e=>{e.currentTarget.style.color="#6e6e73";e.currentTarget.style.background="rgba(255,255,255,0.06)"}}>
-                          copy
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Loading Skeleton */}
-                    {loading && !responses[m.key] ? (
-                      <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-                        <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:4 }}>
-                          {[0,1,2].map(j=>(
-                            <div key={j} style={{ width:4,height:4,borderRadius:"50%",background:m.dot,
-                              animation:`dotBlink 1.2s ease infinite`,animationDelay:`${j*0.2}s` }} />
-                          ))}
-                        </div>
-                        {[100,82,91,74,88].map((w,j)=>(
-                          <div key={j} className="skel" style={{ width:`${w}%`,animationDelay:`${j*0.08}s` }} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="prose-apple">
-                        <ReactMarkdown>{responses[m.key]||""}</ReactMarkdown>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* What just happened + Best for */}
-            {hasRes && !loading && (
-              <div className="anim-hero anim-delay-4" style={{ marginTop:32 }}>
-                {/* Per-model insight */}
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:20 }}>
-                  {MODELS.map(m => (
-                    <div key={m.key} style={{ padding:"14px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12 }}>
-                      <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>
-                        {m.label} · What just happened
-                      </div>
-                      <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.6, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
-                        {insights ? insights[m.key as keyof typeof insights] : "Analysing response…"}
-                      </p>
-                    </div>
+                {/* Task chips */}
+                <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4, marginBottom:32, scrollbarWidth:"none" }}>
+                  {TASK_CATEGORIES.map(t => (
+                    <button key={t.id} className={`task-chip${task.id === t.id ? " active" : ""}`}
+                      onClick={() => { setTask(t); setPrompt(""); resetComparison(); }}>
+                      {t.label}
+                    </button>
                   ))}
                 </div>
-                {/* Best for */}
-                <div style={{ padding:"16px 20px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, display:"flex", alignItems:"flex-start", gap:12 }}>
-                  <div style={{ fontSize:10, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", paddingTop:2 }}>
-                    Best for →
+
+                {/* Input */}
+                <div style={{ background:"#1c1c1e", borderRadius:20, border:"1px solid rgba(255,255,255,0.08)", overflow:"hidden", marginBottom:12, transition:"border 0.2s ease" }}>
+                  <textarea
+                    value={prompt}
+                    onChange={e => setPrompt(e.target.value)}
+                    placeholder={task.placeholder}
+                    rows={5}
+                    onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) compare(); }}
+                    style={{ width:"100%", padding:"20px 22px 12px", background:"transparent", border:"none", outline:"none", color:"#f5f5f7", fontSize:15, fontFamily:"'Figtree',sans-serif", lineHeight:1.65, resize:"none", fontWeight:400 }}
+                  />
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 16px 16px 22px" }}>
+                    <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Sora',sans-serif" }}>⌘ Return to compare</span>
+                    <button className="compare-btn" onClick={compare} disabled={loading || !prompt.trim()}
+                      style={{ width:"auto", padding:"10px 22px", fontSize:14 }}>
+                      {loading ? "Comparing…" : "Compare →"}
+                    </button>
                   </div>
-                  <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.6, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
-                    {insights ? insights.bestFor : "Analysing responses…"}
-                  </p>
                 </div>
-              </div>
-            )}
 
-            {/* Empty State */}
-            {!loading && !hasRes && !gated && (
-              <div style={{ textAlign:"center",padding:"48px 0",color:"#3a3a3c" }}>
-                <div style={{ fontSize:11,fontFamily:"'Sora',sans-serif",letterSpacing:"0.1em",textTransform:"uppercase" }}>
-                  Enter a prompt above to begin
+                {error && <p style={{ fontSize:13, color:"#ff6b6b", marginBottom:16 }}>{error}</p>}
+                <p style={{ fontSize:11, color:"#3a3a3c", marginBottom:40, fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em" }}>
+                  Sent to Anthropic, OpenAI &amp; Google APIs. Do not include personal or confidential information.
+                </p>
+              </div>
+
+              {/* ════════════════════════════════════
+                  SECTION 2 — LIVE COMPARISON
+              ════════════════════════════════════ */}
+              <div className={`section-transition ${section === "compare" ? "section-visible" : "section-hidden"}`}>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                  {sectionHeader("Live Comparison", prompt.length > 90 ? `"${prompt.slice(0, 90)}…"` : `"${prompt}"`)}
+                  {backBtn("← New prompt", "prompt")}
                 </div>
+
+                {/* Response cards */}
+                {(loading || hasRes) && (
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16 }}>
+                    {MODELS.map((m, i) => (
+                      <div key={m.key} className={`model-card${responses[m.key] ? " has-response" : ""}`} style={{ animationDelay:`${i * 0.1}s` }}>
+
+                        {/* Card header */}
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                            <div style={{ width:6, height:6, borderRadius:"50%", background:m.dot, flexShrink:0, marginTop:2 }} />
+                            <div>
+                              <div style={{ fontFamily:"'Sora',sans-serif", fontSize:14, fontWeight:600, color:"#f5f5f7", lineHeight:1.2 }}>{m.label}</div>
+                              <div style={{ fontSize:11, color:"#6e6e73", marginTop:2 }}>{m.maker}</div>
+                            </div>
+                          </div>
+                          {responses[m.key] && (
+                            <button
+                              onClick={() => navigator.clipboard.writeText(stripMarkdown(responses[m.key]))}
+                              style={{ fontSize:11, color:"#6e6e73", background:"rgba(255,255,255,0.06)", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.15s" }}
+                              onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.background="rgba(255,255,255,0.1)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; e.currentTarget.style.background="rgba(255,255,255,0.06)"; }}>
+                              copy
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Loading skeleton */}
+                        {loading && !responses[m.key] ? (
+                          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                              {[0,1,2].map(j => (
+                                <div key={j} style={{ width:4, height:4, borderRadius:"50%", background:m.dot, animation:"dotBlink 1.2s ease infinite", animationDelay:`${j * 0.2}s` }} />
+                              ))}
+                            </div>
+                            {[100,82,91,74,88].map((w,j) => (
+                              <div key={j} className="skel" style={{ width:`${w}%`, animationDelay:`${j * 0.08}s` }} />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="prose-apple">
+                            <ReactMarkdown>{responses[m.key] || ""}</ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* CTA to analysis */}
+                {hasRes && !loading && (
+                  <div style={{ textAlign:"center", marginTop:44 }}>
+                    <button onClick={() => setSection("analysis")}
+                      style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:980, padding:"11px 32px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Sora',sans-serif", color:"#f5f5f7", letterSpacing:"0.01em", transition:"all 0.25s ease" }}
+                      onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+                      View analysis →
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
+              {/* ════════════════════════════════════
+                  SECTION 3 — COMPARISON ANALYSIS
+              ════════════════════════════════════ */}
+              <div className={`section-transition ${section === "analysis" ? "section-visible" : "section-hidden"}`}>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                  {sectionHeader("Comparison Analysis", "Telemetry and honest model review — generated from this specific comparison")}
+                  {backBtn("← Back to responses", "compare")}
+                </div>
 
+                {hasRes ? (
+                  <div className="anim-hero anim-delay-1">
+
+                    {/* ── Telemetry cards ── */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:32 }}>
+                      {MODELS.map(m => (
+                        <div key={m.key} style={{ background:"#1c1c1e", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, padding:"22px 24px" }}>
+
+                          {/* Model header */}
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
+                            <div style={{ width:6, height:6, borderRadius:"50%", background:m.dot }} />
+                            <span style={{ fontSize:13, fontWeight:600, color:"#f5f5f7", fontFamily:"'Sora',sans-serif" }}>{m.label}</span>
+                            <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Figtree',sans-serif" }}>· {m.maker}</span>
+                          </div>
+
+                          {/* 4-up metrics grid */}
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
+                            <MetricTile
+                              label="Response Time"
+                              value={timing[m.key] ? `${(timing[m.key] / 1000).toFixed(1)}s` : "—"}
+                            />
+                            <MetricTile
+                              label="Output Tokens"
+                              value={usage[m.key]?.output ? String(usage[m.key].output) : "—"}
+                            />
+                            <MetricTile
+                              label="Word Count"
+                              value={responses[m.key] ? String(wordCount(responses[m.key])) : "—"}
+                            />
+                            <MetricTile
+                              label="Input Tokens"
+                              value={usage[m.key]?.input ? String(usage[m.key].input) : "—"}
+                            />
+                          </div>
+
+                          {/* Approach */}
+                          <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:16 }}>
+                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:6, fontFamily:"'Sora',sans-serif" }}>
+                              Approach
+                            </div>
+                            <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", fontFamily:"'Figtree',sans-serif", lineHeight:1.55, fontStyle: insights ? "italic" : "italic" }}>
+                              {getApproach(m.key) || "Analysing…"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ── What just happened ── */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:16 }}>
+                      {MODELS.map(m => (
+                        <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12 }}>
+                          <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7 }}>
+                            {m.label} · What just happened
+                          </div>
+                          <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
+                            {getInsight(m.key) || "Analysing response…"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ── Best for ── */}
+                    <div style={{ padding:"16px 20px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, display:"flex", alignItems:"flex-start", gap:14 }}>
+                      <div style={{ fontSize:10, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", paddingTop:1 }}>
+                        Best for →
+                      </div>
+                      <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
+                        {insights?.bestFor || "Analysing responses…"}
+                      </p>
+                    </div>
+
+                  </div>
+                ) : (
+                  /* Empty state */
+                  <div style={{ textAlign:"center", padding:"60px 0", color:"#3a3a3c" }}>
+                    <div style={{ fontSize:11, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:16 }}>
+                      Run a comparison first
+                    </div>
+                    <button onClick={() => setSection("prompt")}
+                      style={{ fontSize:12, color:"#6e6e73", background:"none", border:"none", cursor:"pointer", fontFamily:"'Figtree',sans-serif", textDecoration:"underline" }}>
+                      Go to prompt →
+                    </button>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
 
         </div>
       </main>
