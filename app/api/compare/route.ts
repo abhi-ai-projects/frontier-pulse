@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
 
   if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0)
     return NextResponse.json({ error: "Invalid prompt." }, { status: 400 });
-  if (prompt.length > 2000)
-    return NextResponse.json({ error: "Prompt too long. Please keep it under 2000 characters." }, { status: 400 });
+  if (prompt.length > 600)
+    return NextResponse.json({ error: "Prompt too long. Please keep it under 600 characters." }, { status: 400 });
 
   const injectionPatterns = [
     /ignore previous instructions/i,
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         const start = Date.now();
         const completion = await openai.chat.completions.create({
           model: "gpt-5.4",
-          max_completion_tokens: 8000,
+          max_completion_tokens: 1000,
           messages: [
             { role: "system", content: unifiedSystem },
             { role: "user",   content: prompt },
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           const model = gemini.getGenerativeModel({ model: modelName, systemInstruction: unifiedSystem });
           const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 3000, temperature: 1.0, stopSequences: [] },
+            generationConfig: { maxOutputTokens: 1000, temperature: 1.0, stopSequences: [] },
           });
           const candidate = result.response.candidates?.[0];
           const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();

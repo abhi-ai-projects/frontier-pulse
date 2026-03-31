@@ -81,8 +81,9 @@ export default function Home() {
   const [usage,    setUsage]    = useState<Record<string,{input:number;output:number}>>({});
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
-  const [gated,    setGated]    = useState(false);
-  const [attempts, setAttempts] = useState(getAttempts());
+  const [gated,      setGated]      = useState(false);
+  const [attempts,   setAttempts]   = useState(getAttempts());
+  const [legendOpen, setLegendOpen] = useState(false);
 
   const hasRes    = Object.keys(responses).length > 0;
   const remaining = Math.max(0, FREE_LIMIT - attempts);
@@ -324,7 +325,7 @@ export default function Home() {
                 <div style={{ background:"#1c1c1e", borderRadius:20, border:"1px solid rgba(255,255,255,0.08)", overflow:"hidden", marginBottom:12, transition:"border 0.2s ease" }}>
                   <textarea
                     value={prompt}
-                    onChange={e => setPrompt(e.target.value)}
+                    onChange={e => setPrompt(e.target.value.slice(0, 600))}
                     placeholder={task.placeholder}
                     rows={5}
                     onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) compare(); }}
@@ -332,10 +333,19 @@ export default function Home() {
                   />
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 16px 16px 22px" }}>
                     <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Sora',sans-serif" }}>⌘ Return to compare</span>
-                    <button className="compare-btn" onClick={compare} disabled={loading || !prompt.trim()}
-                      style={{ width:"auto", padding:"10px 22px", fontSize:14 }}>
-                      {loading ? "Comparing…" : "Compare →"}
-                    </button>
+                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                      <span style={{
+                        fontSize:11, fontFamily:"'Sora',sans-serif",
+                        color: prompt.length >= 580 ? "#ff6b6b" : prompt.length >= 450 ? "#f5a623" : "#3a3a3c",
+                        transition:"color 0.2s",
+                      }}>
+                        {prompt.length} / 600
+                      </span>
+                      <button className="compare-btn" onClick={compare} disabled={loading || !prompt.trim()}
+                        style={{ width:"auto", padding:"10px 22px", fontSize:14 }}>
+                        {loading ? "Comparing…" : "Compare →"}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -358,12 +368,16 @@ export default function Home() {
                 {(loading || hasRes) && (
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16 }}>
                     {MODELS.map((m, i) => (
-                      <div key={m.key} className={`model-card${responses[m.key] ? " has-response" : ""}`} style={{ animationDelay:`${i * 0.1}s` }}>
+                      <div key={m.key} className={`model-card${responses[m.key] ? " has-response" : ""}`} style={{
+                        animationDelay:`${i * 0.1}s`,
+                        borderTop:`2px solid ${m.dot}`,
+                        borderLeft:`3px solid ${m.dot}44`,
+                      }}>
 
                         {/* Card header */}
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                            <div style={{ width:6, height:6, borderRadius:"50%", background:m.dot, flexShrink:0, marginTop:2 }} />
+                            <div style={{ width:7, height:7, borderRadius:"50%", background:m.dot, flexShrink:0, marginTop:2, boxShadow:`0 0 8px ${m.dot}88` }} />
                             <div>
                               <div style={{ fontFamily:"'Sora',sans-serif", fontSize:14, fontWeight:600, color:"#f5f5f7", lineHeight:1.2 }}>{m.label}</div>
                               <div style={{ fontSize:11, color:"#6e6e73", marginTop:2 }}>{m.maker}</div>
@@ -372,9 +386,9 @@ export default function Home() {
                           {responses[m.key] && (
                             <button
                               onClick={() => navigator.clipboard.writeText(stripMarkdown(responses[m.key]))}
-                              style={{ fontSize:11, color:"#6e6e73", background:"rgba(255,255,255,0.06)", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.15s" }}
-                              onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.background="rgba(255,255,255,0.1)"; }}
-                              onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; e.currentTarget.style.background="rgba(255,255,255,0.06)"; }}>
+                              style={{ fontSize:11, color:"#8e8e93", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.15s" }}
+                              onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.background="rgba(255,255,255,0.14)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.background="rgba(255,255,255,0.08)"; }}>
                               copy
                             </button>
                           )}
@@ -393,8 +407,15 @@ export default function Home() {
                             ))}
                           </div>
                         ) : (
-                          <div className="prose-apple">
-                            <ReactMarkdown>{responses[m.key] || ""}</ReactMarkdown>
+                          <div style={{ position:"relative" }}>
+                            <div style={{ maxHeight:400, overflowY:"auto", scrollbarWidth:"thin", scrollbarColor:"rgba(255,255,255,0.1) transparent" }}>
+                              <div className="prose-apple">
+                                <ReactMarkdown>{responses[m.key] || ""}</ReactMarkdown>
+                              </div>
+                            </div>
+                            {responses[m.key] && (
+                              <div style={{ position:"absolute", bottom:0, left:0, right:0, height:48, background:"linear-gradient(to bottom, transparent, #1c1c1e)", pointerEvents:"none", borderRadius:"0 0 4px 4px" }} />
+                            )}
                           </div>
                         )}
                       </div>
@@ -427,41 +448,46 @@ export default function Home() {
                 {hasRes ? (
                   <div className="anim-hero anim-delay-1">
 
+                    {/* ── The Verdict (hero, at top) ── */}
+                    <div style={{ marginBottom:28, padding:"20px 24px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, borderLeft:"3px solid rgba(255,255,255,0.22)" }}>
+                      <div style={{ fontSize:9, letterSpacing:"0.14em", color:"#8e8e93", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, marginBottom:8 }}>
+                        The Verdict
+                      </div>
+                      <p style={{ fontSize:13, color: insights ? "#d1d1d6" : "#3a3a3c", lineHeight:1.7, fontFamily:"'Figtree',sans-serif" }}>
+                        {insights?.bestFor || "Analysing responses…"}
+                      </p>
+                    </div>
+
                     {/* ── Telemetry cards ── */}
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:32 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16, marginBottom:28 }}>
                       {MODELS.map(m => (
-                        <div key={m.key} style={{ background:"#1c1c1e", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, padding:"22px 24px" }}>
+                        <div key={m.key} style={{
+                          background:"#1c1c1e",
+                          border:"1px solid rgba(255,255,255,0.08)",
+                          borderTop:`2px solid ${m.dot}`,
+                          borderLeft:`3px solid ${m.dot}44`,
+                          borderRadius:16,
+                          padding:"22px 24px",
+                        }}>
 
                           {/* Model header */}
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
-                            <div style={{ width:6, height:6, borderRadius:"50%", background:m.dot }} />
+                            <div style={{ width:7, height:7, borderRadius:"50%", background:m.dot, boxShadow:`0 0 8px ${m.dot}88` }} />
                             <span style={{ fontSize:13, fontWeight:600, color:"#f5f5f7", fontFamily:"'Sora',sans-serif" }}>{m.label}</span>
-                            <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Figtree',sans-serif" }}>· {m.maker}</span>
+                            <span style={{ fontSize:11, color:"#6e6e73", fontFamily:"'Figtree',sans-serif" }}>· {m.maker}</span>
                           </div>
 
                           {/* 4-up metrics grid */}
                           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
-                            <MetricTile
-                              label="Response Time"
-                              value={timing[m.key] ? `${(timing[m.key] / 1000).toFixed(1)}s` : "—"}
-                            />
-                            <MetricTile
-                              label="Output Tokens"
-                              value={usage[m.key]?.output ? String(usage[m.key].output) : "—"}
-                            />
-                            <MetricTile
-                              label="Est. Read"
-                              value={estReadTime(usage[m.key]?.output ?? 0)}
-                            />
-                            <MetricTile
-                              label="Input Tokens"
-                              value={usage[m.key]?.input ? String(usage[m.key].input) : "—"}
-                            />
+                            <MetricTile label="Response Time" value={timing[m.key] ? `${(timing[m.key] / 1000).toFixed(1)}s` : "—"} />
+                            <MetricTile label="Output Tokens" value={usage[m.key]?.output ? String(usage[m.key].output) : "—"} />
+                            <MetricTile label="Est. Read"     value={estReadTime(usage[m.key]?.output ?? 0)} />
+                            <MetricTile label="Input Tokens"  value={usage[m.key]?.input ? String(usage[m.key].input) : "—"} />
                           </div>
 
                           {/* Eval scores */}
                           <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:14, marginBottom:16 }}>
-                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:8, fontFamily:"'Sora',sans-serif" }}>
+                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", marginBottom:8, fontFamily:"'Sora',sans-serif", fontWeight:600 }}>
                               Eval Scores
                             </div>
                             <EvalRow label="Relevance"    score={getScore(m.key, "Relevance")}    labelFn={scoreLabel}  />
@@ -471,10 +497,10 @@ export default function Home() {
 
                           {/* Approach */}
                           <div>
-                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:6, fontFamily:"'Sora',sans-serif" }}>
+                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", marginBottom:6, fontFamily:"'Sora',sans-serif", fontWeight:600 }}>
                               Approach
                             </div>
-                            <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", fontFamily:"'Figtree',sans-serif", lineHeight:1.55, fontStyle: insights ? "italic" : "italic" }}>
+                            <p style={{ fontSize:12, color: insights ? "#8e8e93" : "#3a3a3c", fontFamily:"'Figtree',sans-serif", lineHeight:1.55, fontStyle:"italic" }}>
                               {getApproach(m.key) || "Analysing…"}
                             </p>
                           </div>
@@ -482,42 +508,18 @@ export default function Home() {
                       ))}
                     </div>
 
-                    {/* ── Metric legend ── */}
-                    <div style={{ marginBottom:32, padding:"20px 24px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.05)", borderRadius:12 }}>
-                      <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:16, fontFamily:"'Sora',sans-serif" }}>
-                        What these metrics mean
-                      </div>
-                      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:"10px 32px" }}>
-                        {[
-                          { name:"Response Time",  def:"How long the model took to generate its full answer from the moment you hit Compare." },
-                          { name:"Output Tokens",  def:"The number of text chunks in the response. Roughly 1 token ≈ ¾ of a word." },
-                          { name:"Est. Read",      def:"Estimated time to read the response at an average pace of 200 words per minute." },
-                          { name:"Input Tokens",   def:"The size of everything sent to the model — your prompt plus the task instructions." },
-                          { name:"Relevance",      def:"How directly and completely the response addresses your specific question. Low = generic or off-topic." },
-                          { name:"Faithfulness",   def:"How grounded the claims are in verifiable facts. Low = possible hallucinated details or unsupported statistics." },
-                          { name:"Safety",         def:"How appropriate the response is for professional use. 100 = fully neutral and brand-safe." },
-                          { name:"Approach",       def:"A structural descriptor of how the model chose to format and present its answer." },
-                        ].map(({ name, def }) => (
-                          <div key={name} style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                            <span style={{ fontSize:10, fontWeight:600, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.04em" }}>{name}</span>
-                            <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Figtree',sans-serif", lineHeight:1.55 }}>{def}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
                     {/* ── Model Output Summary ── */}
-                    <div style={{ marginBottom:12 }}>
-                      <div style={{ fontSize:10, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, paddingBottom:12 }}>
+                    <div style={{ marginBottom:16 }}>
+                      <div style={{ fontSize:10, letterSpacing:"0.12em", color:"#8e8e93", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, paddingBottom:12 }}>
                         Model Output Summary
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16 }}>
                         {MODELS.map(m => (
-                          <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12 }}>
-                            <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7 }}>
+                          <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderTop:`1px solid ${m.dot}55`, borderRadius:12 }}>
+                            <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7, fontWeight:600 }}>
                               {m.label}
                             </div>
-                            <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
+                            <p style={{ fontSize:12, color: insights ? "#8e8e93" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif" }}>
                               {getInsight(m.key) || "Analysing response…"}
                             </p>
                           </div>
@@ -525,14 +527,37 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* ── Best for ── */}
-                    <div style={{ padding:"16px 20px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, display:"flex", alignItems:"flex-start", gap:14 }}>
-                      <div style={{ fontSize:10, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", paddingTop:1 }}>
-                        The Verdict →
-                      </div>
-                      <p style={{ fontSize:12, color: insights ? "#6e6e73" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif", fontStyle: insights ? "normal" : "italic" }}>
-                        {insights?.bestFor || "Analysing responses…"}
-                      </p>
+                    {/* ── Metric legend (collapsible) ── */}
+                    <div style={{ marginTop:20, border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, overflow:"hidden" }}>
+                      <button
+                        onClick={() => setLegendOpen(o => !o)}
+                        style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 20px", background:"rgba(255,255,255,0.02)", border:"none", cursor:"pointer", fontFamily:"'Sora',sans-serif" }}>
+                        <span style={{ fontSize:10, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", fontWeight:600 }}>
+                          What do these metrics mean?
+                        </span>
+                        <span style={{ fontSize:12, color:"#6e6e73", transform: legendOpen ? "rotate(180deg)" : "rotate(0deg)", transition:"transform 0.2s ease" }}>▾</span>
+                      </button>
+                      {legendOpen && (
+                        <div style={{ padding:"16px 20px 20px", background:"rgba(255,255,255,0.01)" }}>
+                          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:"14px 32px" }}>
+                            {[
+                              { name:"Response Time",  def:"How long the model took to generate its full answer from the moment you hit Compare." },
+                              { name:"Output Tokens",  def:"The number of text chunks in the response. Roughly 1 token ≈ ¾ of a word." },
+                              { name:"Est. Read",      def:"Estimated time to read the response at an average pace of 200 words per minute." },
+                              { name:"Input Tokens",   def:"The size of everything sent to the model — your prompt plus the task instructions." },
+                              { name:"Relevance",      def:"How directly and completely the response addresses your specific question. Low = generic or off-topic." },
+                              { name:"Faithfulness",   def:"How grounded the claims are in verifiable facts. Low = possible hallucinated details or unsupported statistics." },
+                              { name:"Safety",         def:"How appropriate the response is for professional use. 100 = fully neutral and brand-safe." },
+                              { name:"Approach",       def:"A structural descriptor of how the model chose to format and present its answer." },
+                            ].map(({ name, def }) => (
+                              <div key={name} style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                                <span style={{ fontSize:10, fontWeight:600, color:"#8e8e93", fontFamily:"'Sora',sans-serif", letterSpacing:"0.04em" }}>{name}</span>
+                                <span style={{ fontSize:11, color:"#6e6e73", fontFamily:"'Figtree',sans-serif", lineHeight:1.6 }}>{def}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                   </div>
