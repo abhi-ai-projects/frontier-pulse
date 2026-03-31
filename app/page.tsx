@@ -151,21 +151,24 @@ export default function Home() {
 
   // ─── Eval row ─────────────────────────────────────────────────────────────
   const EvalRow = ({ label, score, labelFn }: { label: string; score: number; labelFn: (s: number) => string }) => (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
-      <span style={{ fontSize:10, letterSpacing:"0.09em", color:"#3a3a3c", textTransform:"uppercase", fontFamily:"'Sora',sans-serif" }}>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <span style={{ fontSize:11, letterSpacing:"0.05em", color:"#8e8e93", fontFamily:"'Figtree',sans-serif", fontWeight:500 }}>
         {label}
       </span>
-      <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-        <span style={{ fontSize:14, fontWeight:700, color: insights ? scoreColor(score) : "#3a3a3c", fontFamily:"'Sora',sans-serif", letterSpacing:"-0.02em" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+        <span style={{ fontSize:15, fontWeight:700, color: insights ? scoreColor(score) : "#3a3a3c", fontFamily:"'Sora',sans-serif", letterSpacing:"-0.02em" }}>
           {insights ? score : "—"}
         </span>
         {insights && (
-          <>
-            <span style={{ fontSize:10, color:"rgba(255,255,255,0.12)" }}>·</span>
-            <span style={{ fontSize:10, color: scoreColor(score), fontFamily:"'Figtree',sans-serif", letterSpacing:"0.02em" }}>
-              {labelFn(score)}
-            </span>
-          </>
+          <span style={{
+            fontSize:10, fontWeight:600, color: scoreColor(score),
+            background: `${scoreColor(score)}18`,
+            border: `1px solid ${scoreColor(score)}44`,
+            borderRadius:4, padding:"1px 6px",
+            fontFamily:"'Sora',sans-serif", letterSpacing:"0.04em", textTransform:"uppercase",
+          }}>
+            {labelFn(score)}
+          </span>
         )}
       </div>
     </div>
@@ -174,7 +177,7 @@ export default function Home() {
   // ─── Metric tile ──────────────────────────────────────────────────────────
   const MetricTile = ({ label, value }: { label: string; value: string }) => (
     <div>
-      <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:5, fontFamily:"'Sora',sans-serif" }}>
+      <div style={{ fontSize:10, letterSpacing:"0.08em", color:"#6e6e73", textTransform:"uppercase", marginBottom:6, fontFamily:"'Sora',sans-serif", fontWeight:500 }}>
         {label}
       </div>
       <div style={{ fontSize:22, fontWeight:700, color:"#f5f5f7", fontFamily:"'Sora',sans-serif", letterSpacing:"-0.03em", lineHeight:1 }}>
@@ -449,11 +452,11 @@ export default function Home() {
                   <div className="anim-hero anim-delay-1">
 
                     {/* ── The Verdict (hero, at top) ── */}
-                    <div style={{ marginBottom:28, padding:"20px 24px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, borderLeft:"3px solid rgba(255,255,255,0.22)" }}>
-                      <div style={{ fontSize:9, letterSpacing:"0.14em", color:"#8e8e93", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, marginBottom:8 }}>
+                    <div style={{ marginBottom:32, padding:"24px 28px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:16, borderLeft:"4px solid rgba(255,255,255,0.32)" }}>
+                      <div style={{ fontSize:11, letterSpacing:"0.12em", color:"#a1a1a6", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, marginBottom:10 }}>
                         The Verdict
                       </div>
-                      <p style={{ fontSize:13, color: insights ? "#d1d1d6" : "#3a3a3c", lineHeight:1.7, fontFamily:"'Figtree',sans-serif" }}>
+                      <p style={{ fontSize:15, color: insights ? "#e5e5ea" : "#3a3a3c", lineHeight:1.75, fontFamily:"'Figtree',sans-serif", fontWeight:400 }}>
                         {insights?.bestFor || "Analysing responses…"}
                       </p>
                     </div>
@@ -477,7 +480,7 @@ export default function Home() {
                           </div>
 
                           {/* 4-up metrics grid */}
-                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"18px 24px", marginBottom:22 }}>
                             <MetricTile label="Response Time" value={timing[m.key] ? `${(timing[m.key] / 1000).toFixed(1)}s` : "—"} />
                             <MetricTile label="Output Tokens" value={usage[m.key]?.output ? String(usage[m.key].output) : "—"} />
                             <MetricTile label="Est. Read"     value={estReadTime(usage[m.key]?.output ?? 0)} />
@@ -485,8 +488,8 @@ export default function Home() {
                           </div>
 
                           {/* Eval scores */}
-                          <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:14, marginBottom:16 }}>
-                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", marginBottom:8, fontFamily:"'Sora',sans-serif", fontWeight:600 }}>
+                          <div style={{ borderTop:"1px solid rgba(255,255,255,0.07)", paddingTop:16, marginBottom:18 }}>
+                            <div style={{ fontSize:10, letterSpacing:"0.1em", color:"#8e8e93", textTransform:"uppercase", marginBottom:10, fontFamily:"'Sora',sans-serif", fontWeight:600 }}>
                               Eval Scores
                             </div>
                             <EvalRow label="Relevance"    score={getScore(m.key, "Relevance")}    labelFn={scoreLabel}  />
@@ -495,11 +498,11 @@ export default function Home() {
                           </div>
 
                           {/* Approach */}
-                          <div>
-                            <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", marginBottom:6, fontFamily:"'Sora',sans-serif", fontWeight:600 }}>
+                          <div style={{ borderTop:"1px solid rgba(255,255,255,0.07)", paddingTop:16 }}>
+                            <div style={{ fontSize:10, letterSpacing:"0.1em", color:"#8e8e93", textTransform:"uppercase", marginBottom:8, fontFamily:"'Sora',sans-serif", fontWeight:600 }}>
                               Approach
                             </div>
-                            <p style={{ fontSize:12, color: insights ? "#8e8e93" : "#3a3a3c", fontFamily:"'Figtree',sans-serif", lineHeight:1.55, fontStyle:"italic" }}>
+                            <p style={{ fontSize:13, color: insights ? "#a1a1a6" : "#3a3a3c", fontFamily:"'Figtree',sans-serif", lineHeight:1.65 }}>
                               {getApproach(m.key) || "Analysing…"}
                             </p>
                           </div>
@@ -509,16 +512,19 @@ export default function Home() {
 
                     {/* ── Model Output Summary ── */}
                     <div style={{ marginBottom:16 }}>
-                      <div style={{ fontSize:10, letterSpacing:"0.12em", color:"#8e8e93", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, paddingBottom:12 }}>
+                      <div style={{ fontSize:13, letterSpacing:"-0.01em", color:"#a1a1a6", fontFamily:"'Sora',sans-serif", fontWeight:600, paddingBottom:14 }}>
                         Model Output Summary
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:16 }}>
                         {MODELS.map(m => (
-                          <div key={m.key} style={{ padding:"16px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", boxShadow:`inset 0 1px 0 ${m.dot}55`, borderRadius:12 }}>
-                            <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7, fontWeight:600 }}>
-                              {m.label}
+                          <div key={m.key} style={{ padding:"18px 20px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", boxShadow:`inset 0 2px 0 ${m.dot}44`, borderRadius:14 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>
+                              <div style={{ width:6, height:6, borderRadius:"50%", background:m.dot, flexShrink:0, boxShadow:`0 0 6px ${m.dot}88` }} />
+                              <span style={{ fontSize:12, color:m.dot, fontFamily:"'Sora',sans-serif", letterSpacing:"0.04em", fontWeight:600 }}>
+                                {m.label}
+                              </span>
                             </div>
-                            <p style={{ fontSize:12, color: insights ? "#8e8e93" : "#3a3a3c", lineHeight:1.65, fontFamily:"'Figtree',sans-serif" }}>
+                            <p style={{ fontSize:13, color: insights ? "#a1a1a6" : "#3a3a3c", lineHeight:1.7, fontFamily:"'Figtree',sans-serif" }}>
                               {getInsight(m.key) || "Analysing response…"}
                             </p>
                           </div>
@@ -531,14 +537,14 @@ export default function Home() {
                       <button
                         onClick={() => setLegendOpen(o => !o)}
                         style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 20px", background:"rgba(255,255,255,0.02)", border:"none", cursor:"pointer", fontFamily:"'Sora',sans-serif" }}>
-                        <span style={{ fontSize:10, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", fontWeight:600 }}>
+                        <span style={{ fontSize:12, letterSpacing:"0.04em", color:"#8e8e93", fontWeight:500 }}>
                           What do these metrics mean?
                         </span>
-                        <span style={{ fontSize:12, color:"#6e6e73", transform: legendOpen ? "rotate(180deg)" : "rotate(0deg)", transition:"transform 0.2s ease" }}>▾</span>
+                        <span style={{ fontSize:13, color:"#6e6e73", transform: legendOpen ? "rotate(180deg)" : "rotate(0deg)", transition:"transform 0.2s ease" }}>▾</span>
                       </button>
                       {legendOpen && (
-                        <div style={{ padding:"16px 20px 20px", background:"rgba(255,255,255,0.01)" }}>
-                          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:"14px 32px" }}>
+                        <div style={{ padding:"18px 20px 24px", background:"rgba(255,255,255,0.01)" }}>
+                          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:"16px 32px" }}>
                             {[
                               { name:"Response Time",  def:"How long the model took to generate its full answer from the moment you hit Compare." },
                               { name:"Output Tokens",  def:"The number of text chunks in the response. Roughly 1 token ≈ ¾ of a word." },
@@ -549,9 +555,9 @@ export default function Home() {
                               { name:"Safety",         def:"How appropriate the response is for professional use. 100 = fully neutral and brand-safe." },
                               { name:"Approach",       def:"A structural descriptor of how the model chose to format and present its answer." },
                             ].map(({ name, def }) => (
-                              <div key={name} style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                                <span style={{ fontSize:10, fontWeight:600, color:"#8e8e93", fontFamily:"'Sora',sans-serif", letterSpacing:"0.04em" }}>{name}</span>
-                                <span style={{ fontSize:11, color:"#6e6e73", fontFamily:"'Figtree',sans-serif", lineHeight:1.6 }}>{def}</span>
+                              <div key={name} style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                                <span style={{ fontSize:11, fontWeight:600, color:"#a1a1a6", fontFamily:"'Sora',sans-serif", letterSpacing:"0.03em" }}>{name}</span>
+                                <span style={{ fontSize:12, color:"#6e6e73", fontFamily:"'Figtree',sans-serif", lineHeight:1.65 }}>{def}</span>
                               </div>
                             ))}
                           </div>
