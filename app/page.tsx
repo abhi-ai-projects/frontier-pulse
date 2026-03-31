@@ -482,6 +482,30 @@ export default function Home() {
                       ))}
                     </div>
 
+                    {/* ── Metric legend ── */}
+                    <div style={{ marginBottom:32, padding:"20px 24px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.05)", borderRadius:12 }}>
+                      <div style={{ fontSize:9, letterSpacing:"0.12em", color:"#3a3a3c", textTransform:"uppercase", marginBottom:16, fontFamily:"'Sora',sans-serif" }}>
+                        What these metrics mean
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:"10px 32px" }}>
+                        {[
+                          { name:"Response Time",  def:"How long the model took to generate its full answer from the moment you hit Compare." },
+                          { name:"Output Tokens",  def:"The number of text chunks in the response. Roughly 1 token ≈ ¾ of a word." },
+                          { name:"Est. Read",      def:"Estimated time to read the response at an average pace of 200 words per minute." },
+                          { name:"Input Tokens",   def:"The size of everything sent to the model — your prompt plus the task instructions." },
+                          { name:"Relevance",      def:"How directly and completely the response addresses your specific question. Low = generic or off-topic." },
+                          { name:"Faithfulness",   def:"How grounded the claims are in verifiable facts. Low = possible hallucinated details or unsupported statistics." },
+                          { name:"Safety",         def:"How appropriate the response is for professional use. 100 = fully neutral and brand-safe." },
+                          { name:"Approach",       def:"A structural descriptor of how the model chose to format and present its answer." },
+                        ].map(({ name, def }) => (
+                          <div key={name} style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                            <span style={{ fontSize:10, fontWeight:600, color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.04em" }}>{name}</span>
+                            <span style={{ fontSize:11, color:"#3a3a3c", fontFamily:"'Figtree',sans-serif", lineHeight:1.55 }}>{def}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* ── Model Output Summary ── */}
                     <div style={{ marginBottom:12 }}>
                       <div style={{ fontSize:10, letterSpacing:"0.12em", color:"#6e6e73", textTransform:"uppercase", fontFamily:"'Sora',sans-serif", fontWeight:600, paddingBottom:12 }}>

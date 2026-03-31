@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input detected." }, { status: 400 });
 
   const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
-  const unifiedSystem = `${systemContext} ${baseGuardrail} Respond immediately and directly to what the user gave you. Do not ask for clarification, do not explain what you could help with, and do not list your capabilities. If the input is brief, make smart assumptions and produce a complete response. Do not default to email format unless the user explicitly says "email". No Subject lines, no salutations, no sign-offs unless explicitly requested. Aim for 300-350 words.`;
+  const unifiedSystem = `${systemContext} ${baseGuardrail} Respond immediately and directly to what the user gave you. Do not ask for clarification, do not explain what you could help with, and do not list your capabilities. If the input is brief, make smart assumptions and produce a complete response. Do not default to email format unless the user explicitly says "email". No Subject lines, no salutations, no sign-offs unless explicitly requested. Aim for 200-250 words.`;
 
   try {
     // ── Run all 3 models in parallel, each IIFE tracks its own timing ──
