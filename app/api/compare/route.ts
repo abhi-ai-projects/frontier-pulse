@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
           const model = gemini.getGenerativeModel({ model: modelName, systemInstruction: unifiedSystem });
           const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            // maxOutputTokens must be generous for Gemini 2.5 Pro: thinking tokens count
+            // maxOutputTokens must be generous for Gemini 3.1 Pro: thinking tokens count
             // against this budget. At 1000 the model exhausts the limit before writing a
             // word. thinkingBudget:1024 bounds the thinking overhead so the response always
             // has room. Cast to any because thinkingConfig is not yet in the SDK typedefs.
@@ -84,13 +84,13 @@ export async function POST(req: NextRequest) {
           return { text, usageMeta };
         };
         try {
-          const { text, usageMeta } = await callGemini("gemini-2.5-pro");
+          const { text, usageMeta } = await callGemini("gemini-3.1-pro-preview");
           return { text, usageMeta, ms: Date.now() - start };
         } catch (err: unknown) {
           const status = (err as { status?: number })?.status;
           if (status === 503 || status === 429) {
-            console.log("Gemini 2.5 Pro unavailable, falling back to 2.5 Flash");
-            const { text, usageMeta } = await callGemini("gemini-2.5-flash");
+            console.log("Gemini 3.1 Pro unavailable, falling back to 2.5 Pro");
+            const { text, usageMeta } = await callGemini("gemini-2.5-pro");
             return { text, usageMeta, ms: Date.now() - start };
           }
           throw err;
@@ -164,7 +164,7 @@ ${claudeText || "Unavailable"}
 --- GPT-5.4 response ---
 ${openaiText || "Unavailable"}
 
---- Gemini 2.5 Pro response ---
+--- Gemini 3.1 Pro response ---
 ${geminiText || "Unavailable"}
 
 Scoring guide (use when setting numeric fields):

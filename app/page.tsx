@@ -37,7 +37,7 @@ const TASK_CATEGORIES = [
 const MODELS = [
   { key: "claude", label: "Claude Sonnet 4.6", maker: "Anthropic", dot: "#ff9f6b" },
   { key: "openai", label: "GPT-5.4",           maker: "OpenAI",    dot: "#63d68d" },
-  { key: "gemini", label: "Gemini 2.5 Pro",    maker: "Google",    dot: "#6ab4f5" },
+  { key: "gemini", label: "Gemini 3.1 Pro",    maker: "Google",    dot: "#6ab4f5" },
 ];
 
 // Removed num field; renamed ANALYSIS → ANALYZE
@@ -363,7 +363,7 @@ export default function Home() {
                   </h1>
                   {/* Model names — brighter */}
                   <p style={{ fontSize:14, color:"#c7c7cc", fontFamily:"'Sora',sans-serif", letterSpacing:"0.05em" }}>
-                    Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 2.5 Pro
+                    Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 3.1 Pro
                   </p>
                 </section>
 
