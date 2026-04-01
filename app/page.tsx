@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 
 type Section = "prompt" | "compare" | "analysis";
@@ -118,21 +118,16 @@ export default function Home() {
   // Refs to each card's scroll container — used to detect overflow on short responses
   const cardScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // After responses render, mark non-overflowing cards as atBottom so gradient hides
-  useEffect(() => {
+  // After responses render, synchronously mark non-overflowing cards as atBottom
+  // useLayoutEffect fires after DOM mutations but before paint, so measurements are accurate
+  useLayoutEffect(() => {
     if (!hasRes) return;
-    const timer = setTimeout(() => {
-      MODELS.forEach(m => {
-        const el = cardScrollRefs.current[m.key];
-        if (el) {
-          const needsScroll = el.scrollHeight > el.clientHeight + 4;
-          if (!needsScroll) {
-            setAtBottom(prev => ({ ...prev, [m.key]: true }));
-          }
-        }
-      });
-    }, 100);
-    return () => clearTimeout(timer);
+    MODELS.forEach(m => {
+      const el = cardScrollRefs.current[m.key];
+      if (el && el.scrollHeight <= el.clientHeight + 4) {
+        setAtBottom(prev => ({ ...prev, [m.key]: true }));
+      }
+    });
   }, [responses]);
 
   const compare = async () => {
