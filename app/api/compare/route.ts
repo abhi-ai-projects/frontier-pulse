@@ -177,7 +177,7 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
   "claude":             "1-2 sentence honest observation about what Claude's response actually did",
   "openai":             "1-2 sentence honest observation about what GPT-5.4's response actually did",
   "gemini":             "1-2 sentence honest observation about what Gemini's response actually did",
-  "bestFor":            "Claude if [specific reason] · GPT-5.4 if [specific reason] · Gemini if [specific reason]",
+  "bestFor":            "Choose Claude if you want [specific reason]. Pick GPT-5.4 if you prefer [specific reason]. Go with Gemini if you need [specific reason].",
   "claudeApproach":     "6-8 word structural descriptor e.g. 'Narrative prose, advisory tone, top-down'",
   "openaiApproach":     "6-8 word structural descriptor e.g. 'Numbered list, direct, action-forward'",
   "geminiApproach":     "6-8 word structural descriptor e.g. 'Sectioned headers, broad coverage, analytical'",

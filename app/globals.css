@@ -94,11 +94,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 10px 22px;
   border-radius: 100px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-display);
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--gray-1);
@@ -170,7 +170,18 @@ body {
 .prose-apple th,.prose-apple td { padding: 8px 12px; border: 1px solid var(--border); }
 .prose-apple th { background: var(--surface-2); color: var(--gray-1); font-weight: 500; }
 
+/* Hide scrollbars globally except where explicitly needed */
 ::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Textarea — show a subtle scrollbar so users know they can scroll */
+textarea::-webkit-scrollbar          { width: 5px; }
+textarea::-webkit-scrollbar-thumb    { background: rgba(255,255,255,0.16); border-radius: 3px; }
+textarea::-webkit-scrollbar-track    { background: transparent; }
+
+/* Response card inner scroll containers */
+.model-card div[style*="overflow"]::-webkit-scrollbar       { width: 4px; }
+.model-card div[style*="overflow"]::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+.model-card div[style*="overflow"]::-webkit-scrollbar-track { background: transparent; }
 
 /* ── Layout ── */
 .main-content { margin-left: 72px; }
