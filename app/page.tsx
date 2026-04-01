@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 
 type Section = "prompt" | "compare" | "analysis";
@@ -115,6 +115,26 @@ export default function Home() {
     setAtBottom(prev => prev[key] === hit ? prev : { ...prev, [key]: hit });
   };
 
+  // Refs to each card's scroll container — used to detect overflow on short responses
+  const cardScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // After responses render, mark non-overflowing cards as atBottom so gradient hides
+  useEffect(() => {
+    if (!hasRes) return;
+    const timer = setTimeout(() => {
+      MODELS.forEach(m => {
+        const el = cardScrollRefs.current[m.key];
+        if (el) {
+          const needsScroll = el.scrollHeight > el.clientHeight + 4;
+          if (!needsScroll) {
+            setAtBottom(prev => ({ ...prev, [m.key]: true }));
+          }
+        }
+      });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [responses]);
+
   const compare = async () => {
     if (!prompt.trim()) return;
     if (getAttempts() >= FREE_LIMIT) { setGated(true); return; }
@@ -155,6 +175,16 @@ export default function Home() {
       onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.24)"; }}
       onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
       {label}
+    </button>
+  );
+
+  // Small square icon button — symbol only, title tooltip for accessibility
+  const iconBtn = (symbol: string, title: string, onClick: () => void) => (
+    <button onClick={onClick} title={title}
+      style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, color:"#8e8e93", background:"none", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, cursor:"pointer", transition:"all 0.2s ease", flexShrink:0, lineHeight:1 }}
+      onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.24)"; }}
+      onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+      {symbol}
     </button>
   );
 
@@ -304,7 +334,7 @@ export default function Home() {
       </nav>
 
       {/* ── Main ── */}
-      <main className="main-content" style={{ paddingTop:56, minHeight:"100vh", background:"#000" }}>
+      <main className="main-content" style={{ paddingTop:56, background:"#000" }}>
         <div style={{ maxWidth:1080, margin:"0 auto", padding:"0 24px 40px", position:"relative" }}>
 
           {/* ── Freemium Gate ── */}
@@ -325,7 +355,7 @@ export default function Home() {
 
           {/* ── Sections container ── */}
           {!gated && (
-            <div style={{ position:"relative" }}>
+            <div style={{ position:"relative", overflow:"hidden" }}>
 
               {/* ════════════════════════════════════
                   SECTION 1 — PROMPT
@@ -355,7 +385,7 @@ export default function Home() {
                 {/* New Prompt button — appears above input once a compare has been run */}
                 {submitted && (
                   <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
-                    {ghostBtn("+ New Prompt", newPrompt)}
+                    {iconBtn("+", "New Prompt", newPrompt)}
                   </div>
                 )}
 
@@ -422,10 +452,10 @@ export default function Home() {
               <div className={`section-transition ${section === "compare" ? "section-visible" : "section-hidden"}`}>
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
                   {sectionHeader("Live Comparison", prompt.length > 90 ? `"${prompt.slice(0, 90)}…"` : `"${prompt}"`)}
-                  {/* Two navigation buttons */}
+                  {/* Two navigation icon buttons */}
                   <div style={{ display:"flex", gap:8, paddingTop:40 }}>
-                    {ghostBtn("‹ Current Prompt", () => goToSection("prompt"))}
-                    {ghostBtn("+ New Prompt", newPrompt)}
+                    {iconBtn("↵", "Current Prompt", () => goToSection("prompt"))}
+                    {iconBtn("+", "New Prompt", newPrompt)}
                   </div>
                 </div>
 
@@ -475,6 +505,7 @@ export default function Home() {
                         ) : (
                           <div style={{ position:"relative" }}>
                             <div
+                              ref={el => { cardScrollRefs.current[m.key] = el; }}
                               style={{ maxHeight:400, overflowY:"auto", scrollbarWidth:"thin", scrollbarColor:"rgba(255,255,255,0.12) transparent" }}
                               onScroll={e => onCardScroll(m.key, e.currentTarget as HTMLDivElement)}
                             >
@@ -512,7 +543,7 @@ export default function Home() {
               <div className={`section-transition ${section === "analysis" ? "section-visible" : "section-hidden"}`}>
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
                   {sectionHeader("Model Response Metrics & Analysis", "Telemetry and honest model review — generated from this specific comparison")}
-                  {ghostBtn("← Back to responses", () => goToSection("compare"))}
+                  {iconBtn("↵", "Back to responses", () => goToSection("compare"))}
                 </div>
 
                 {hasRes ? (
