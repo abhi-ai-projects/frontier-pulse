@@ -1,6 +1,12 @@
 "use client";
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
+import {
+  trackPromptSubmitted,
+  trackComparisonComplete,
+  trackAttemptLimitReached,
+  trackModalOpened,
+} from "./lib/posthog";
 
 type Section = "prompt" | "compare" | "analysis";
 
@@ -231,7 +237,12 @@ export default function Home() {
   const compare = async () => {
     if (!prompt.trim()) return;
     // Client-side gate: fast check before spending a round-trip
-    if (getAttempts() >= FREE_LIMIT) { setGated(true); return; }
+    if (getAttempts() >= FREE_LIMIT) {
+      trackAttemptLimitReached(FREE_LIMIT);
+      setGated(true);
+      return;
+    }
+    trackPromptSubmitted(prompt, task.id);
     setLoading(true);
     resetComparison();
     goToSection("compare");
@@ -248,7 +259,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) {
         // 429 = server-enforced daily limit reached (e.g. via different browser/IP)
-        if (res.status === 429) { setGated(true); return; }
+        if (res.status === 429) { trackAttemptLimitReached(FREE_LIMIT); setGated(true); return; }
         setError(data.error || "Something went wrong.");
         return;
       }
@@ -264,6 +275,18 @@ export default function Home() {
       setInsights(data.insights  || null);
       setTiming(data.timing      || {});
       setUsage(data.usage        || {});
+      // Analytics: fire after all state is set so timing data is available
+      if (data.timing && data.insights) {
+        trackComparisonComplete({
+          claudeTime:      data.timing.claude  ?? 0,
+          openaiTime:      data.timing.openai  ?? 0,
+          geminiTime:      data.timing.gemini  ?? 0,
+          bestRelevance:   data.insights.bestRelevanceModel   ?? "",
+          bestFaithfulness:data.insights.bestFaithfulnessModel ?? "",
+          bestSafety:      data.insights.bestSafetyModel      ?? "",
+          taskContext:     task.id,
+        });
+      }
     } catch { setError("Network error — check your connection."); }
     finally   { setLoading(false); }
   };
@@ -363,7 +386,7 @@ export default function Home() {
         </span>
         {/* Right side: How it works + attempt counter */}
         <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-          {ghostBtn("How it works", () => setShowHowItWorks(true))}
+          {ghostBtn("How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
           <div style={{ minWidth:90, display:"flex", justifyContent:"flex-end" }}>
             {attempts > 0 && !gated && (
               <span style={{
