@@ -21,7 +21,7 @@
   --font-body: 'Figtree', sans-serif;
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
 
 body {
   background: var(--black);
@@ -209,6 +209,7 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
 @media (max-width: 768px) {
   .side-nav-desktop { display: none !important; }
   .main-content     { margin-left: 0; padding-bottom: 60px; }
+  .keyboard-hint    { display: none; }
 
   .side-nav-mobile {
     display: flex;

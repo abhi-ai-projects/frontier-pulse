@@ -511,7 +511,7 @@ export default function Home() {
                     Same prompt. Three minds.
                   </h1>
                   {/* Model names — brighter */}
-                  <p style={{ fontSize:14, color:"#c7c7cc", fontFamily:"'Sora',sans-serif", letterSpacing:"0.05em" }}>
+                  <p style={{ fontSize:"clamp(11px,3.2vw,14px)", color:"#c7c7cc", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em", whiteSpace:"nowrap" }}>
                     Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 3.1 Pro
                   </p>
                 </section>
@@ -558,8 +558,8 @@ export default function Home() {
                     }}
                   />
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 16px 16px 22px" }}>
-                    {/* Hint — brighter */}
-                    <span style={{ fontSize:11, color:"#8e8e93", fontFamily:"'Sora',sans-serif" }}>
+                    {/* Hint — hidden on mobile via .keyboard-hint */}
+                    <span className="keyboard-hint" style={{ fontSize:11, color:"#8e8e93", fontFamily:"'Sora',sans-serif" }}>
                       {submitted ? "Running comparison…" : "⌘ Return to compare"}
                     </span>
                     <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -685,9 +685,11 @@ export default function Home() {
                   SECTION 3 — MODEL RESPONSE METRICS & ANALYSIS
               ════════════════════════════════════ */}
               <div className={`section-transition ${section === "analysis" ? "section-visible" : "section-hidden"}`}>
-                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                <div style={{ position:"relative" }}>
                   {sectionHeader("Model Response Metrics & Analysis", "Telemetry and honest model review — generated from this specific comparison")}
-                  {iconBtn("↵", "Back to responses", () => goToSection("compare"))}
+                  <div style={{ position:"absolute", top:44, right:0 }}>
+                    {iconBtn("↵", "Back to responses", () => goToSection("compare"))}
+                  </div>
                 </div>
 
                 {hasRes ? (
