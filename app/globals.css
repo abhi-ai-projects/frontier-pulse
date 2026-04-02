@@ -206,10 +206,17 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
   animation: stepReveal 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
 }
 
+/* Nav: "How it works" — text on desktop, icon on mobile */
+.nav-how-text { display: flex; }
+.nav-how-icon { display: none; }
+
 @media (max-width: 768px) {
   .side-nav-desktop { display: none !important; }
   .main-content     { margin-left: 0; padding-bottom: 60px; }
   .keyboard-hint    { display: none; }
+  .top-nav          { padding: 10px 16px !important; }
+  .nav-how-text     { display: none; }
+  .nav-how-icon     { display: flex; }
 
   .side-nav-mobile {
     display: flex;

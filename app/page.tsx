@@ -369,36 +369,47 @@ export default function Home() {
   return (
     <>
       {/* ── Floating Top Nav ── */}
-      <nav style={{
+      <nav className="top-nav" style={{
         position:"fixed", top:0, left:0, right:0, zIndex:100,
         display:"flex", justifyContent:"space-between", alignItems:"center",
         padding:"10px 32px",
         background:"rgba(0,0,0,0.80)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)",
         borderBottom:"1px solid rgba(255,255,255,0.07)",
       }}>
-        {/* Brand */}
-        <span style={{
-          fontFamily:"'Sora',sans-serif", fontSize:22, fontWeight:800,
-          letterSpacing:"-0.04em", color:"#f5f5f7",
-          background:"linear-gradient(90deg, #f5f5f7 60%, rgba(255,255,255,0.55))",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        }}>
-          Frontier Pulse
-        </span>
-        {/* Right side: How it works + attempt counter + auth */}
-        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-          {ghostBtn("How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
-          <div style={{ minWidth:90, display:"flex", justifyContent:"flex-end" }}>
-            {attempts > 0 && !gated && (
-              <span style={{
-                fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
-                color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
-                letterSpacing:"0.01em",
-              }}>
-                {attempts} of {FREE_LIMIT} today
-              </span>
-            )}
+        {/* Brand — logo mark + wordmark */}
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <circle cx="4"  cy="11" r="3.5" fill="#ff9f6b"/>
+            <circle cx="11" cy="11" r="3.5" fill="#63d68d"/>
+            <circle cx="18" cy="11" r="3.5" fill="#6ab4f5"/>
+            <line x1="7.5"  y1="11" x2="8.5"  y2="11" stroke="#2a2a2a" strokeWidth="1.5"/>
+            <line x1="13.5" y1="11" x2="14.5" y2="11" stroke="#2a2a2a" strokeWidth="1.5"/>
+          </svg>
+          <span style={{ fontFamily:"'Sora',sans-serif", fontSize:17, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
+            Frontier Pulse
+          </span>
+        </div>
+
+        {/* Right side: How it works (text→icon on mobile) + attempt counter */}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {/* Desktop: text button */}
+          <div className="nav-how-text">
+            {ghostBtn("How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
           </div>
+          {/* Mobile: compact icon button */}
+          <div className="nav-how-icon">
+            {iconBtn("?", "How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
+          </div>
+          {/* Attempt counter — only after first use */}
+          {attempts > 0 && !gated && (
+            <span style={{
+              fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
+              color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
+              letterSpacing:"0.01em",
+            }}>
+              {FREE_LIMIT - attempts} left
+            </span>
+          )}
         </div>
       </nav>
 
