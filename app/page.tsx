@@ -390,22 +390,26 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Right side: How it works (text→icon on mobile) + attempt counter */}
+        {/* Right side: How it works (text on desktop, ⓘ on mobile) + counter (desktop only) */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          {/* Desktop: text button */}
+          {/* Desktop: text ghost button */}
           <div className="nav-how-text">
             {ghostBtn("How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
           </div>
-          {/* Mobile: compact icon button */}
+          {/* Mobile: borderless white ⓘ — clean, no box */}
           <div className="nav-how-icon">
-            {iconBtn("?", "How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
+            <button
+              onClick={() => { trackModalOpened("how_it_works"); setShowHowItWorks(true); }}
+              aria-label="How it works"
+              style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 2px", lineHeight:1, fontSize:19, color:"#f5f5f7" }}>
+              ⓘ
+            </button>
           </div>
-          {/* Attempt counter — only after first use */}
+          {/* Counter — desktop nav only; mobile version lives in the textarea footer */}
           {attempts > 0 && !gated && (
-            <span style={{
+            <span className="nav-counter-desktop" style={{
               fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
-              color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
-              letterSpacing:"0.01em",
+              color:"#c7c7cc", letterSpacing:"0.01em",
             }}>
               {attempts}/{FREE_LIMIT}
             </span>
@@ -569,10 +573,16 @@ export default function Home() {
                     }}
                   />
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 16px 16px 22px" }}>
-                    {/* Hint — hidden on mobile via .keyboard-hint */}
+                    {/* Desktop: keyboard shortcut hint */}
                     <span className="keyboard-hint" style={{ fontSize:11, color:"#8e8e93", fontFamily:"'Sora',sans-serif" }}>
                       {submitted ? "Running comparison…" : "⌘ Return to compare"}
                     </span>
+                    {/* Mobile: attempt counter lives here — contextually near Compare */}
+                    {!submitted && attempts > 0 && !gated && (
+                      <span className="input-counter-mobile" style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:500, color:"#8e8e93" }}>
+                        Attempt {attempts}/{FREE_LIMIT}
+                      </span>
+                    )}
                     <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                       {/* Char counter — brighter default */}
                       {!submitted && (

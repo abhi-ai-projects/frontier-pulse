@@ -207,16 +207,21 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
 }
 
 /* Nav: "How it works" — text on desktop, icon on mobile */
-.nav-how-text { display: flex; }
-.nav-how-icon { display: none; }
+.nav-how-text        { display: flex; }
+.nav-how-icon        { display: none; }
+/* Counter: in nav on desktop, in textarea footer on mobile */
+.nav-counter-desktop   { display: inline; }
+.input-counter-mobile  { display: none; }
 
 @media (max-width: 768px) {
-  .side-nav-desktop { display: none !important; }
-  .main-content     { margin-left: 0; padding-bottom: 60px; }
-  .keyboard-hint    { display: none; }
-  .top-nav          { padding: 10px 16px !important; }
-  .nav-how-text     { display: none; }
-  .nav-how-icon     { display: flex; }
+  .side-nav-desktop    { display: none !important; }
+  .main-content        { margin-left: 0; padding-bottom: 60px; }
+  .keyboard-hint       { display: none; }
+  .top-nav             { padding: 10px 16px !important; }
+  .nav-how-text        { display: none; }
+  .nav-how-icon        { display: flex; }
+  .nav-counter-desktop { display: none; }
+  .input-counter-mobile{ display: inline; }
 
   .side-nav-mobile {
     display: flex;
