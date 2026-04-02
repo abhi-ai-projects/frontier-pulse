@@ -800,95 +800,142 @@ export default function Home() {
 
       {/* ── "How it works" modal ── */}
       {showHowItWorks && (
-        <>
-          {/* Backdrop — click to close */}
+        // Backdrop doubles as the flex centering container — avoids fixed-inside-transform bugs
+        <div
+          onClick={() => setShowHowItWorks(false)}
+          style={{
+            position:"fixed", inset:0, zIndex:200,
+            background:"rgba(0,0,0,0.80)",
+            backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            padding:"20px",
+            animation:"fadeIn 0.2s ease both",
+          }}
+        >
+          {/* Modal card — stopPropagation so clicks inside don't close */}
           <div
-            onClick={() => setShowHowItWorks(false)}
+            onClick={e => e.stopPropagation()}
             style={{
-              position:"fixed", inset:0, zIndex:200,
-              background:"rgba(0,0,0,0.78)",
-              backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)",
-              animation:"fadeIn 0.2s ease both",
+              width:"100%", maxWidth:540,
+              maxHeight:"calc(100vh - 80px)",
+              overflowY:"auto",
+              scrollbarWidth:"thin",
+              scrollbarColor:"rgba(255,255,255,0.15) transparent",
+              background:"#1c1c1e",
+              border:"1px solid rgba(255,255,255,0.12)",
+              borderRadius:24,
+              padding:"28px 30px 30px",
+              animation:"fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) both",
+              position:"relative",
             }}
-          />
-
-          {/* Modal card */}
-          <div style={{
-            position:"fixed", zIndex:201,
-            top:"50%", left:"50%",
-            transform:"translate(-50%, -50%)",
-            width:"min(560px, calc(100vw - 40px))",
-            maxHeight:"calc(100vh - 80px)",
-            overflowY:"auto",
-            scrollbarWidth:"none",
-            background:"#1c1c1e",
-            border:"1px solid rgba(255,255,255,0.12)",
-            borderRadius:24,
-            padding:"32px 36px 36px",
-            animation:"fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) both",
-          }}>
-
+          >
             {/* Header */}
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24 }}>
               <div>
-                <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:20, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:5 }}>
+                <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:19, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:4 }}>
                   How Frontier Pulse works
                 </h2>
-                <p style={{ fontSize:13, color:"#8e8e93", fontFamily:"'Figtree',sans-serif" }}>
-                  What happens from the moment you hit Compare
+                <p style={{ fontSize:12, color: hasRes ? "#63d68d" : "#6e6e73", fontFamily:"'Figtree',sans-serif" }}>
+                  {hasRes ? "Showing live data from your last run" : "Run a comparison to see live data here"}
                 </p>
               </div>
               {iconBtn("✕", "Close", () => setShowHowItWorks(false))}
             </div>
 
-            {/* Steps timeline */}
+            {/* Steps */}
             <div style={{ display:"flex", flexDirection:"column" }}>
               {HOW_IT_WORKS_STEPS.map((step, i) => (
-                <div
-                  key={i}
-                  className="hiw-step"
-                  style={{ animationDelay:`${i * 0.07}s`, display:"flex", gap:16 }}
-                >
-                  {/* Left column: numbered circle + connecting line */}
+                <div key={i} className="hiw-step" style={{ animationDelay:`${i * 0.06}s`, display:"flex", gap:14 }}>
+
+                  {/* Left: circle + connector line */}
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0 }}>
                     <div style={{
-                      width:30, height:30, borderRadius:"50%", flexShrink:0,
-                      background:`${step.color}14`,
-                      border:`1.5px solid ${step.color}55`,
+                      width:28, height:28, borderRadius:"50%", flexShrink:0,
+                      background:`${step.color}16`, border:`1.5px solid ${step.color}50`,
                       display:"flex", alignItems:"center", justifyContent:"center",
                     }}>
-                      <span style={{ fontSize:11, fontWeight:700, color:step.color, fontFamily:"'Sora',sans-serif" }}>
-                        {i + 1}
-                      </span>
+                      <span style={{ fontSize:10, fontWeight:700, color:step.color, fontFamily:"'Sora',sans-serif" }}>{i + 1}</span>
                     </div>
-                    {/* Vertical connector — hidden on last step */}
                     {i < HOW_IT_WORKS_STEPS.length - 1 && (
-                      <div style={{ width:1, flex:1, minHeight:20, background:"rgba(255,255,255,0.07)", margin:"5px 0" }} />
+                      <div style={{ width:1, flex:1, minHeight:16, background:"rgba(255,255,255,0.07)", margin:"4px 0" }} />
                     )}
                   </div>
 
-                  {/* Right column: title + description */}
-                  <div style={{ paddingBottom: i < HOW_IT_WORKS_STEPS.length - 1 ? 20 : 0, paddingTop:4 }}>
-                    <div style={{ fontFamily:"'Sora',sans-serif", fontSize:14, fontWeight:600, color:"#f5f5f7", marginBottom:6, lineHeight:1.3 }}>
+                  {/* Right: content */}
+                  <div style={{ paddingBottom: i < HOW_IT_WORKS_STEPS.length - 1 ? 16 : 0, paddingTop:3, minWidth:0 }}>
+                    <div style={{ fontFamily:"'Sora',sans-serif", fontSize:13, fontWeight:600, color:"#f5f5f7", marginBottom:4, lineHeight:1.3 }}>
                       {step.title}
                     </div>
-                    <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#8e8e93", lineHeight:1.72, margin:0 }}>
+                    <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:12, color:"#8e8e93", lineHeight:1.7, margin:0 }}>
                       {step.desc}
                     </p>
+
+                    {/* ── Step 1: show current prompt if one exists ── */}
+                    {i === 0 && prompt && (
+                      <div style={{ marginTop:8, padding:"8px 12px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8 }}>
+                        <span style={{ fontSize:12, color:"#c7c7cc", fontFamily:"'Figtree',sans-serif", fontStyle:"italic" }}>
+                          &ldquo;{prompt.slice(0, 110)}{prompt.length > 110 ? "…" : ""}&rdquo;
+                        </span>
+                      </div>
+                    )}
+
+                    {/* ── Step 3: model chips ── */}
+                    {i === 2 && (
+                      <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
+                        {MODELS.map(m => (
+                          <div key={m.key} style={{ display:"flex", alignItems:"center", gap:5, padding:"3px 10px", background:`${m.dot}12`, border:`1px solid ${m.dot}30`, borderRadius:100 }}>
+                            <div style={{ width:5, height:5, borderRadius:"50%", background:m.dot, flexShrink:0 }} />
+                            <span style={{ fontSize:11, color:m.dot, fontFamily:"'Sora',sans-serif", fontWeight:600, whiteSpace:"nowrap" }}>{m.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── Step 4: live response times ── */}
+                    {i === 3 && hasRes && Object.keys(timing).length > 0 && (
+                      <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
+                        {MODELS.map(m => (
+                          <div key={m.key} style={{ padding:"6px 12px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, textAlign:"center" }}>
+                            <div style={{ fontSize:10, color:"#6e6e73", fontFamily:"'Sora',sans-serif", marginBottom:3 }}>{m.label}</div>
+                            <div style={{ fontSize:14, color: m.dot, fontFamily:"'Sora',sans-serif", fontWeight:700 }}>
+                              {timing[m.key] ? `${(timing[m.key]/1000).toFixed(1)}s` : "—"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── Step 5: live eval scores ── */}
+                    {i === 4 && insights && insights.claudeRelevance > 0 && (
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginTop:10 }}>
+                        {MODELS.map(m => (
+                          <div key={m.key} style={{ padding:"8px 10px", background:`${m.dot}0c`, border:`1px solid ${m.dot}25`, borderRadius:10 }}>
+                            <div style={{ fontSize:10, color:m.dot, fontFamily:"'Sora',sans-serif", fontWeight:700, marginBottom:6 }}>{m.label}</div>
+                            {(["Relevance","Faithfulness","Safety"] as const).map(metric => (
+                              <div key={metric} style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                                <span style={{ fontSize:10, color:"#6e6e73", fontFamily:"'Figtree',sans-serif" }}>{metric.slice(0,4)}</span>
+                                <span style={{ fontSize:10, color: scoreColor(getScore(m.key, metric)), fontFamily:"'Sora',sans-serif", fontWeight:600 }}>
+                                  {getScore(m.key, metric) || "—"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Footer note */}
-            <div style={{ marginTop:24, padding:"14px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12 }}>
-              <p style={{ fontSize:12, color:"#6e6e73", fontFamily:"'Figtree',sans-serif", lineHeight:1.65, margin:0 }}>
-                Your prompt is never stored. All content is sent directly to Anthropic, OpenAI, and Google APIs and discarded after the response is returned.
+            {/* Footer */}
+            <div style={{ marginTop:20, padding:"12px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10 }}>
+              <p style={{ fontSize:11, color:"#6e6e73", fontFamily:"'Figtree',sans-serif", lineHeight:1.65, margin:0 }}>
+                Your prompt is never stored. Content is sent directly to Anthropic, OpenAI, and Google APIs and discarded after the response is returned.
               </p>
             </div>
-
           </div>
-        </>
+        </div>
       )}
 
     </>
