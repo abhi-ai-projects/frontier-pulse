@@ -1,46 +1,109 @@
+/**
+ * route.ts  —  POST /api/compare
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Runs a user prompt through Claude, GPT, and Gemini in parallel, then uses
+ * Claude Haiku to generate a structured comparison (scores + qualitative notes).
+ *
+ * Request body: { prompt: string, systemContext: string }
+ * Optional headers:
+ *   X-FP         browser fingerprint (anti-incognito-bypass)
+ *   X-Batch-Key  batch-test bypass secret (matches BATCH_SECRET env var)
+ *
+ * Response (200): { claude, openai, gemini, insights, timing, usage, attemptsLeft }
+ * Rate-limited (429): { error: string }
+ * Bad input (400):    { error: string }
+ */
+
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { RateLimiterMemory } from "rate-limiter-flexible";
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit } from "@/app/lib/rateLimit";
 
-// NOTE: bumped for overnight batch test — revert to points:10 after run completes
-const rateLimiter = new RateLimiterMemory({ points: 600, duration: 60 * 60 });
-
+// ── API clients ───────────────────────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const gemini    = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+// ── Prompt injection patterns ─────────────────────────────────────────────────
+// Designed to catch clear jailbreak / system-prompt override attempts without
+// being so broad that they flag legitimate professional prompts.
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+|previous\s+)?instructions/i,
+  /disregard\s+(your\s+)?(system\s+)?prompt/i,
+  /forget\s+(your\s+)?(previous\s+)?instructions/i,
+  /pretend\s+(you\s+are|to\s+be)/i,
+  /act\s+as\s+if\s+you\s+(have\s+no|don'?t\s+have)/i,
+  /you\s+are\s+now\s+(a\s+|an\s+)?(?!able|going|comparing|analyzing|evaluating)/i,
+  /jailbreak/i,
+  /\bDAN\s+mode\b/i,         // "Do Anything Now" jailbreak
+  /override\s+(my\s+|your\s+)?(system\s+)?prompt/i,
+];
+
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  try { await rateLimiter.consume(ip); } catch {
-    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  // ── 1. Rate limiting ───────────────────────────────────────────────────────
+  // Client IP (Vercel sets x-forwarded-for)
+  const ip          = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  // Lightweight browser fingerprint generated client-side (canvas + screen + timezone)
+  const fingerprint = req.headers.get("x-fp") ?? undefined;
+  // Batch-test bypass header (must match BATCH_SECRET env var)
+  const batchKey    = req.headers.get("x-batch-key") ?? undefined;
+
+  const { allowed, attemptsLeft } = await checkRateLimit(ip, fingerprint, batchKey);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "You've reached your 5 daily comparisons. Come back tomorrow — resets at midnight UTC." },
+      { status: 429 },
+    );
   }
 
-  const { prompt, systemContext } = await req.json();
+  // ── 2. Parse & validate input ──────────────────────────────────────────────
+  let prompt: string, systemContext: string;
+  try {
+    ({ prompt, systemContext } = await req.json());
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
 
+  // Type and length checks
   if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0)
-    return NextResponse.json({ error: "Invalid prompt." }, { status: 400 });
+    return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
   if (prompt.length > 600)
     return NextResponse.json({ error: "Prompt too long. Please keep it under 600 characters." }, { status: 400 });
 
-  const injectionPatterns = [
-    /ignore previous instructions/i,
-    /ignore all instructions/i,
-    /disregard your system prompt/i,
-    /you are now/i,
-    /jailbreak/i,
-  ];
-  if (injectionPatterns.some((p) => p.test(prompt)))
+  // Strip control characters and null bytes
+  const sanitized = prompt.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
+  if (sanitized.length === 0)
     return NextResponse.json({ error: "Invalid input detected." }, { status: 400 });
 
+  // Prompt injection check
+  if (INJECTION_PATTERNS.some((p) => p.test(sanitized)))
+    return NextResponse.json({ error: "Invalid input detected." }, { status: 400 });
+
+  // ── 3. OpenAI Moderation ──────────────────────────────────────────────────
+  // Free endpoint — screens for harmful content before spending tokens on models.
+  // We don't block on moderation errors; they just get logged.
+  try {
+    const modResult = await openai.moderations.create({ input: sanitized });
+    if (modResult.results[0]?.flagged) {
+      return NextResponse.json(
+        { error: "Your prompt was flagged for potentially harmful content. Please revise and try again." },
+        { status: 400 },
+      );
+    }
+  } catch (modErr) {
+    console.warn("[moderation] check failed (non-blocking):", modErr);
+  }
+
+  // ── 4. System prompt ───────────────────────────────────────────────────────
   const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
   const unifiedSystem = `${systemContext} ${baseGuardrail} Respond immediately and directly to what the user gave you. Do not ask for clarification, do not explain what you could help with, and do not list your capabilities. If the input is brief or ambiguous, respond only to what is actually there — do not invent a scenario, fabricate context, or hallucinate specifics. Do not default to email format unless the user explicitly says "email". No Subject lines, no salutations, no sign-offs unless explicitly requested. Aim for 200-250 words.`;
 
   try {
-    // ── Run all 3 models in parallel, each IIFE tracks its own timing ──
+    // ── 5. Run all 3 models in parallel ───────────────────────────────────────
     const [claudeRes, openaiRes, geminiRes] = await Promise.allSettled([
 
+      // Claude Sonnet 4.6
       (async () => {
         const start = Date.now();
         const msg = await anthropic.messages.create({
@@ -48,11 +111,12 @@ export async function POST(req: NextRequest) {
           max_tokens: 1000,
           temperature: 1.0,
           system: unifiedSystem,
-          messages: [{ role: "user", content: prompt }],
+          messages: [{ role: "user", content: sanitized }],
         });
         return { msg, ms: Date.now() - start };
       })(),
 
+      // GPT-5.4
       (async () => {
         const start = Date.now();
         const completion = await openai.chat.completions.create({
@@ -61,25 +125,25 @@ export async function POST(req: NextRequest) {
           temperature: 1.0,
           messages: [
             { role: "system", content: unifiedSystem },
-            { role: "user",   content: prompt },
+            { role: "user",   content: sanitized },
           ],
         });
         return { completion, ms: Date.now() - start };
       })(),
 
+      // Gemini 3.1 Pro (falls back to 2.5 Pro on 503/429)
       (async () => {
         const start = Date.now();
         const callGemini = async (modelName: string) => {
           const model = gemini.getGenerativeModel({ model: modelName, systemInstruction: unifiedSystem });
           const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            contents: [{ role: "user", parts: [{ text: sanitized }] }],
             // maxOutputTokens must be generous for Gemini 3.1 Pro: thinking tokens count
-            // against this budget. At 1000 the model exhausts the limit before writing a
-            // word. thinkingBudget:1024 bounds the thinking overhead so the response always
-            // has room. Cast to any because thinkingConfig is not yet in the SDK typedefs.
+            // against this budget. thinkingBudget:1024 bounds thinking overhead so the
+            // response always has room. Cast to any — thinkingConfig not yet in SDK types.
+            // maxOutputTokens = thinkingBudget (1024) + target response (1024), matching
+            // Claude and GPT at ~1000 tokens net.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            // maxOutputTokens = thinkingBudget (1024) + target response (1024) so Gemini's
-            // net response ceiling matches Claude and GPT at ~1000 tokens.
             generationConfig: { maxOutputTokens: 2048, temperature: 1.0, stopSequences: [], thinkingConfig: { thinkingBudget: 1024 } } as any,
           });
           const candidate = result.response.candidates?.[0];
@@ -102,7 +166,7 @@ export async function POST(req: NextRequest) {
       })(),
     ]);
 
-    // ── Extract text ──
+    // ── 6. Extract text responses ──────────────────────────────────────────────
     const getError = (r: PromiseSettledResult<unknown>, name: string) => {
       if (r.status === "rejected") { console.error(`${name} error:`, r.reason); return "This model is currently unavailable."; }
       return null;
@@ -126,14 +190,13 @@ export async function POST(req: NextRequest) {
       ? (geminiRes.value as GR).text
       : getError(geminiRes, "Gemini");
 
-    // ── Extract timing (ms per model) ──
+    // ── 7. Timing & token usage ────────────────────────────────────────────────
     const timing = {
       claude: claudeRes.status === "fulfilled" ? (claudeRes.value as CR).ms : 0,
       openai: openaiRes.status === "fulfilled" ? (openaiRes.value as OR).ms : 0,
       gemini: geminiRes.status === "fulfilled" ? (geminiRes.value as GR).ms : 0,
     };
 
-    // ── Extract token usage ──
     const claudeUsage = claudeRes.status === "fulfilled" ? (claudeRes.value as CR).msg.usage : null;
     const openaiUsage = openaiRes.status === "fulfilled" ? (openaiRes.value as OR).completion.usage : null;
     const geminiMeta  = geminiRes.status === "fulfilled" ? (geminiRes.value as GR).usageMeta : null;
@@ -144,7 +207,7 @@ export async function POST(req: NextRequest) {
       gemini: { input: geminiMeta?.promptTokenCount ?? 0, output: geminiMeta?.candidatesTokenCount ?? 0 },
     };
 
-    // ── Generate dynamic insights + per-model approach descriptors ──
+    // ── 8. Claude Haiku — structured comparison & scoring ─────────────────────
     let insights = {
       claude: "", openai: "", gemini: "", bestFor: "",
       claudeApproach: "", openaiApproach: "", geminiApproach: "",
@@ -160,7 +223,7 @@ export async function POST(req: NextRequest) {
         messages: [{
           role: "user",
           content: `Task context: "${systemContext}"
-User's prompt: "${prompt}"
+User's prompt: "${sanitized}"
 
 --- Claude Sonnet 4.6 response ---
 ${claudeText || "Unavailable"}
@@ -205,7 +268,17 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
       console.error("Insights generation failed:", e);
     }
 
-    return NextResponse.json({ claude: claudeText, openai: openaiText, gemini: geminiText, insights, timing, usage });
+    // ── 9. Return response ─────────────────────────────────────────────────────
+    // attemptsLeft lets the client stay in sync with the server's authoritative count
+    return NextResponse.json({
+      claude: claudeText,
+      openai: openaiText,
+      gemini: geminiText,
+      insights,
+      timing,
+      usage,
+      attemptsLeft,
+    });
 
   } catch (error) {
     console.error("API error:", error);

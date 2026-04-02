@@ -47,17 +47,79 @@ const NAV_ITEMS: { id: Section; label: string }[] = [
   { id: "analysis", label: "ANALYZE" },
 ];
 
-const FREE_LIMIT  = 3;
-const STORAGE_KEY = "fp_attempts";
+// ─── Attempt tracking (daily, resets at midnight UTC) ────────────────────────
+// The server is the authoritative source (Vercel KV); localStorage is the UX
+// layer that shows the gate immediately without a round-trip on page load.
+// After each successful API call the server returns `attemptsLeft` which is
+// used to keep localStorage in sync.
 
-function getAttempts() {
-  if (typeof window === "undefined") return 0;
-  return parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
+const FREE_LIMIT  = 5;          // must match DAILY_LIMIT in app/lib/rateLimit.ts
+const STORAGE_KEY = "fp_daily"; // { date: "YYYY-MM-DD", count: number }
+
+interface DailyRecord { date: string; count: number; }
+
+function todayUTC(): string {
+  return new Date().toISOString().slice(0, 10); // "2026-04-01"
 }
+
+function getDaily(): DailyRecord {
+  if (typeof window === "undefined") return { date: todayUTC(), count: 0 };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { date: todayUTC(), count: 0 };
+    const parsed = JSON.parse(raw) as DailyRecord;
+    // Different date = new day, reset counter
+    if (parsed.date !== todayUTC()) return { date: todayUTC(), count: 0 };
+    return parsed;
+  } catch { return { date: todayUTC(), count: 0 }; }
+}
+
+function getAttempts() { return getDaily().count; }
+
+function setAttemptCount(n: number) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayUTC(), count: n }));
+}
+
 function incrementAttempts() {
-  const n = getAttempts() + 1;
-  localStorage.setItem(STORAGE_KEY, String(n));
-  return n;
+  const next = getAttempts() + 1;
+  setAttemptCount(next);
+  return next;
+}
+
+// ─── Browser fingerprint ──────────────────────────────────────────────────────
+// Lightweight deterministic hash of browser/device characteristics.
+// Survives incognito reopens on the same device because the canvas hash and
+// screen properties don't change across sessions.  Sent as X-FP request header
+// so the server can enforce the daily limit per-device, not just per-IP.
+function buildFingerprint(): string {
+  try {
+    const parts: string[] = [
+      navigator.userAgent.slice(0, 80),
+      `${screen.width}x${screen.height}`,
+      String(screen.colorDepth),
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      navigator.language,
+      String(navigator.hardwareConcurrency ?? 0),
+    ];
+    try {
+      // Canvas fingerprint — varies by GPU/driver/OS rendering pipeline
+      const c = document.createElement("canvas");
+      const ctx = c.getContext("2d");
+      if (ctx) {
+        ctx.font = "14px Arial";
+        ctx.fillText("FP\u{1F52C}", 2, 14);
+        parts.push(c.toDataURL().slice(-32));
+      }
+    } catch { /* canvas blocked */ }
+    // FNV-1a 32-bit hash — fast, good distribution
+    const str = parts.join("|");
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(36);
+  } catch { return "unknown"; }
 }
 function stripMarkdown(t: string) {
   return t.replace(/#{1,6}\s+/g,"").replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1")
@@ -132,19 +194,36 @@ export default function Home() {
 
   const compare = async () => {
     if (!prompt.trim()) return;
+    // Client-side gate: fast check before spending a round-trip
     if (getAttempts() >= FREE_LIMIT) { setGated(true); return; }
     setLoading(true);
     resetComparison();
     goToSection("compare");
     try {
-      const res  = await fetch("/api/compare", {
+      const fp  = buildFingerprint();
+      const res = await fetch("/api/compare", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-FP": fp, // browser fingerprint for server-side per-device enforcement
+        },
         body: JSON.stringify({ prompt, systemContext: task.systemContext }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); return; }
-      setAttempts(incrementAttempts());
+      if (!res.ok) {
+        // 429 = server-enforced daily limit reached (e.g. via different browser/IP)
+        if (res.status === 429) { setGated(true); return; }
+        setError(data.error || "Something went wrong.");
+        return;
+      }
+      // Sync localStorage with the server's authoritative attempt count
+      if (typeof data.attemptsLeft === "number") {
+        const used = FREE_LIMIT - data.attemptsLeft;
+        setAttemptCount(used);
+        setAttempts(used);
+      } else {
+        setAttempts(incrementAttempts());
+      }
       setResponses({ claude: data.claude, openai: data.openai, gemini: data.gemini });
       setInsights(data.insights  || null);
       setTiming(data.timing      || {});
@@ -254,7 +333,7 @@ export default function Home() {
               color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
               letterSpacing:"0.01em",
             }}>
-              Attempt {attempts} of {FREE_LIMIT}
+              {attempts} of {FREE_LIMIT} today
             </span>
           )}
         </div>
@@ -339,8 +418,8 @@ export default function Home() {
               padding:"48px 40px", textAlign:"center", maxWidth:480, margin:"40px auto",
             }}>
               <div style={{ width:44,height:44,borderRadius:"50%",background:"rgba(0,113,227,0.15)",border:"1px solid rgba(0,113,227,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:20 }}>⊕</div>
-              <h2 style={{ fontFamily:"'Sora',sans-serif",fontSize:20,fontWeight:600,marginBottom:8 }}>You've used 3 free comparisons</h2>
-              <p style={{ color:"#8e8e93",fontSize:14,marginBottom:28,lineHeight:1.6 }}>Sign in with Google to keep going — no payment needed.</p>
+              <h2 style={{ fontFamily:"'Sora',sans-serif",fontSize:20,fontWeight:600,marginBottom:8 }}>You've used your 5 free comparisons today</h2>
+              <p style={{ color:"#8e8e93",fontSize:14,marginBottom:28,lineHeight:1.6 }}>Your limit resets at midnight UTC. Sign in with Google to unlock more comparisons — no payment needed.</p>
               <button style={{ background:"#0071e3",color:"#fff",border:"none",borderRadius:980,padding:"12px 28px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Figtree',sans-serif" }}>
                 Continue with Google
               </button>
