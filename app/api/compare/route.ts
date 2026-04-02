@@ -9,7 +9,7 @@
  *   X-FP         browser fingerprint (anti-incognito-bypass)
  *   X-Batch-Key  batch-test bypass secret (matches BATCH_SECRET env var)
  *
- * Response (200): { claude, openai, gemini, insights, timing, usage, attemptsLeft, limit, authenticated }
+ * Response (200): { claude, openai, gemini, insights, timing, usage, attemptsLeft }
  * Rate-limited (429): { error: string }
  * Bad input (400):    { error: string }
  */
@@ -19,7 +19,6 @@ import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/app/lib/rateLimit";
-import { auth } from "@/auth";
 
 // ── API clients ───────────────────────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -49,16 +48,13 @@ export async function POST(req: NextRequest) {
   const fingerprint = req.headers.get("x-fp") ?? undefined;
   // Batch-test bypass header (must match BATCH_SECRET env var)
   const batchKey    = req.headers.get("x-batch-key") ?? undefined;
-  // Session — authenticated users get a higher daily limit
-  const session     = await auth();
-  const userId      = session?.user?.email ?? undefined;
 
-  const { allowed, attemptsLeft, limit, authenticated } = await checkRateLimit(ip, fingerprint, batchKey, userId);
+  const { allowed, attemptsLeft } = await checkRateLimit(ip, fingerprint, batchKey);
   if (!allowed) {
-    const msg = authenticated
-      ? `You've reached your ${limit} daily comparisons. Come back tomorrow — resets at midnight UTC.`
-      : `You've reached your ${limit} free comparisons. Sign in with Google for ${limit * 4} comparisons/day, or come back tomorrow.`;
-    return NextResponse.json({ error: msg }, { status: 429 });
+    return NextResponse.json(
+      { error: "You've reached your 10 daily comparisons. Come back tomorrow — resets at midnight UTC." },
+      { status: 429 },
+    );
   }
 
   // ── 2. Parse & validate input ──────────────────────────────────────────────
@@ -273,8 +269,7 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
     }
 
     // ── 9. Return response ─────────────────────────────────────────────────────
-    // attemptsLeft + limit let the client stay in sync with the server's authoritative count
-    // and display the correct cap for anonymous vs authenticated users
+    // attemptsLeft lets the client stay in sync with the server's authoritative count
     return NextResponse.json({
       claude: claudeText,
       openai: openaiText,
@@ -283,8 +278,6 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
       timing,
       usage,
       attemptsLeft,
-      limit,
-      authenticated,
     });
 
   } catch (error) {

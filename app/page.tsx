@@ -7,7 +7,6 @@ import {
   trackAttemptLimitReached,
   trackModalOpened,
 } from "./lib/posthog";
-import { useSession, signIn, signOut } from "next-auth/react";
 
 type Section = "prompt" | "compare" | "analysis";
 
@@ -95,7 +94,7 @@ const NAV_ITEMS: { id: Section; label: string }[] = [
 // After each successful API call the server returns `attemptsLeft` which is
 // used to keep localStorage in sync.
 
-const FREE_LIMIT  = 5;          // must match DAILY_LIMIT in app/lib/rateLimit.ts
+const FREE_LIMIT  = 10;         // must match DAILY_LIMIT in app/lib/rateLimit.ts
 const STORAGE_KEY = "fp_daily"; // { date: "YYYY-MM-DD", count: number }
 
 interface DailyRecord { date: string; count: number; }
@@ -186,13 +185,10 @@ export default function Home() {
   const [usage,     setUsage]     = useState<Record<string,{input:number;output:number}>>({});
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
-  const [gated,          setGated]          = useState(false);
   const [attempts,       setAttempts]       = useState(getAttempts());
+  // Gate is true immediately if the user has already exhausted today's limit on load
+  const [gated,          setGated]          = useState(() => getAttempts() >= FREE_LIMIT);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  // Auth: session state from NextAuth — null = loading, undefined = unauthenticated
-  const { data: session } = useSession();
-  // dailyLimit reflects the server-returned cap (5 anon / 20 authenticated)
-  const [dailyLimit, setDailyLimit]       = useState(FREE_LIMIT);
   // Track per-card scroll-to-bottom to hide fade gradient when fully scrolled
   const [atBottom,  setAtBottom]  = useState<Record<string, boolean>>({});
 
@@ -242,8 +238,7 @@ export default function Home() {
   const compare = async () => {
     if (!prompt.trim()) return;
     // Client-side gate: fast check before spending a round-trip
-    if (!session && getAttempts() >= FREE_LIMIT) {
-      // Only gate anonymous users client-side; authenticated limits are enforced server-side
+    if (getAttempts() >= FREE_LIMIT) {
       trackAttemptLimitReached(FREE_LIMIT);
       setGated(true);
       return;
@@ -270,11 +265,10 @@ export default function Home() {
         return;
       }
       // Sync localStorage with the server's authoritative attempt count
-      if (typeof data.attemptsLeft === "number" && typeof data.limit === "number") {
-        const used = data.limit - data.attemptsLeft;
+      if (typeof data.attemptsLeft === "number") {
+        const used = FREE_LIMIT - data.attemptsLeft;
         setAttemptCount(used);
         setAttempts(used);
-        setDailyLimit(data.limit); // keep UI limit in sync with server (anon vs authed)
       } else {
         setAttempts(incrementAttempts());
       }
@@ -398,30 +392,13 @@ export default function Home() {
             {attempts > 0 && !gated && (
               <span style={{
                 fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
-                color: attempts >= dailyLimit ? "#ff9f6b" : "#c7c7cc",
+                color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
                 letterSpacing:"0.01em",
               }}>
-                {attempts} of {dailyLimit} today
+                {attempts} of {FREE_LIMIT} today
               </span>
             )}
           </div>
-          {/* Auth: show Google avatar + sign-out, or nothing (sign-in is in the gate) */}
-          {session?.user ? (
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              {session.user.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={session.user.image} alt="avatar"
-                  style={{ width:28, height:28, borderRadius:"50%", border:"1px solid rgba(255,255,255,0.15)" }} />
-              )}
-              <button onClick={() => signOut()} style={{
-                background:"transparent", border:"1px solid rgba(255,255,255,0.12)",
-                borderRadius:980, padding:"5px 14px", fontSize:12, color:"#8e8e93",
-                cursor:"pointer", fontFamily:"'Figtree',sans-serif",
-              }}>
-                Sign out
-              </button>
-            </div>
-          ) : null}
         </div>
       </nav>
 
@@ -497,45 +474,26 @@ export default function Home() {
       <main className="main-content" style={{ paddingTop:56, background:"#000" }}>
         <div style={{ maxWidth:1080, margin:"0 auto", padding:"0 24px 40px", position:"relative" }}>
 
-          {/* ── Freemium Gate ── */}
+          {/* ── Daily limit gate ── */}
           {gated && (
             <div style={{
               background:"#1c1c1e", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20,
-              padding:"48px 40px", textAlign:"center", maxWidth:480, margin:"40px auto",
+              padding:"52px 40px", textAlign:"center", maxWidth:440, margin:"40px auto",
             }}>
-              {/* Google "G" icon */}
-              <div style={{ width:44,height:44,borderRadius:"50%",background:"rgba(66,133,244,0.12)",border:"1px solid rgba(66,133,244,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:22,fontWeight:700,color:"#4285F4",fontFamily:"sans-serif" }}>G</div>
-              <h2 style={{ fontFamily:"'Sora',sans-serif",fontSize:20,fontWeight:600,marginBottom:8,color:"#f5f5f7" }}>
-                You've used your {FREE_LIMIT} free comparisons today
+              <div style={{
+                width:44, height:44, borderRadius:"50%",
+                background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                margin:"0 auto 24px", fontSize:20,
+              }}>⏳</div>
+              <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:20, fontWeight:600, marginBottom:12, color:"#f5f5f7", lineHeight:1.3 }}>
+                You&apos;ve reached today&apos;s testing limit
               </h2>
-              <p style={{ color:"#8e8e93",fontSize:14,marginBottom:10,lineHeight:1.6 }}>
-                Sign in with Google to get <strong style={{ color:"#c7c7cc" }}>20 comparisons/day</strong> — no payment needed.
+              <p style={{ color:"#8e8e93", fontSize:14, lineHeight:1.7, marginBottom:0 }}>
+                Thanks for exploring Frontier Pulse. You&apos;ve used all {FREE_LIMIT} comparisons for today.
+                <br />
+                Your limit resets at <strong style={{ color:"#c7c7cc" }}>12:00 AM UTC</strong> — see you then.
               </p>
-              <p style={{ color:"#6e6e73",fontSize:13,marginBottom:28,lineHeight:1.5 }}>
-                Or come back tomorrow — your free limit resets at midnight UTC.
-              </p>
-              {/* Google sign-in button */}
-              <button
-                onClick={() => signIn("google")}
-                style={{
-                  display:"inline-flex", alignItems:"center", gap:10,
-                  background:"#fff", color:"#1f1f1f",
-                  border:"none", borderRadius:980,
-                  padding:"12px 28px", fontSize:14, fontWeight:600,
-                  cursor:"pointer", fontFamily:"'Figtree',sans-serif",
-                  boxShadow:"0 1px 3px rgba(0,0,0,0.3)",
-                }}
-              >
-                {/* Google logo SVG */}
-                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"/>
-                  <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"/>
-                  <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332Z"/>
-                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58Z"/>
-                </svg>
-                Continue with Google
-              </button>
-              <p style={{ marginTop:16,fontSize:11,color:"#6e6e73" }}>Your prompts are never stored or associated with your account.</p>
             </div>
           )}
 
