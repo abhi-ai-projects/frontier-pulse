@@ -405,14 +405,26 @@ export default function Home() {
               ⓘ
             </button>
           </div>
-          {/* Counter — desktop nav only; mobile version lives in the textarea footer */}
+          {/* Usage pill — desktop nav only; mobile version lives in the textarea footer */}
           {attempts > 0 && !gated && (
-            <span className="nav-counter-desktop" style={{
-              fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
-              color:"#c7c7cc", letterSpacing:"0.01em",
+            <div className="nav-counter-desktop" style={{
+              display:"flex", alignItems:"center", gap:8,
+              background:"rgba(255,255,255,0.05)",
+              border:"1px solid rgba(255,255,255,0.09)",
+              borderRadius:100, padding:"5px 12px",
             }}>
-              {attempts}/{FREE_LIMIT}
-            </span>
+              {/* Progress bar — green → orange as limit approaches */}
+              <div style={{ width:44, height:2, background:"rgba(255,255,255,0.1)", borderRadius:1, overflow:"hidden" }}>
+                <div style={{
+                  width:`${(attempts / FREE_LIMIT) * 100}%`, height:"100%", borderRadius:1,
+                  background: attempts >= 8 ? "#ff9f6b" : "#63d68d",
+                  transition:"width 0.4s ease, background 0.4s ease",
+                }} />
+              </div>
+              <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:600, color:"#c7c7cc", letterSpacing:"0.01em" }}>
+                {attempts}/{FREE_LIMIT}
+              </span>
+            </div>
           )}
         </div>
       </nav>
@@ -561,6 +573,7 @@ export default function Home() {
                     onChange={e => !submitted && setPrompt(e.target.value.slice(0, 600))}
                     placeholder={task.placeholder}
                     rows={5}
+                    className="prompt-textarea"
                     onKeyDown={e => { if (!submitted && e.key === "Enter" && (e.metaKey || e.ctrlKey)) compare(); }}
                     style={{
                       width:"100%", padding:"20px 22px 12px",
