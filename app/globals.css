@@ -196,6 +196,16 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
   display: none;
 }
 
+/* ── "How it works" modal step animation ── */
+@keyframes stepReveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hiw-step {
+  opacity: 0;
+  animation: stepReveal 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
 @media (max-width: 768px) {
   .side-nav-desktop { display: none !important; }
   .main-content     { margin-left: 0; padding-bottom: 60px; }

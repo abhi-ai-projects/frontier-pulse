@@ -34,6 +34,41 @@ const TASK_CATEGORIES = [
   },
 ];
 
+// ─── "How it works" step definitions ─────────────────────────────────────────
+// Defined outside the component so the array isn't re-created on every render.
+const HOW_IT_WORKS_STEPS = [
+  {
+    title: "You enter a prompt",
+    desc: "Choose Write, Analyze, or Decide. Type what you need — up to 600 characters. The same prompt goes to every model so you're comparing apples to apples.",
+    color: "#f5f5f7",
+  },
+  {
+    title: "Safety screening",
+    desc: "Before any paid model runs, your prompt passes through OpenAI's free moderation API. Flagged content is blocked before a single token is spent.",
+    color: "#f5a623",
+  },
+  {
+    title: "Sent to 3 models simultaneously",
+    desc: "Your prompt reaches Anthropic, OpenAI, and Google's APIs at the exact same moment using Promise.allSettled — not sequentially. The timing differences you see are real.",
+    color: "#6ab4f5",
+  },
+  {
+    title: "Models respond independently",
+    desc: "Claude Sonnet 4.6, GPT-5.4, and Gemini 3.1 Pro each craft their response in isolation — they have no visibility into what the others are producing.",
+    color: "#63d68d",
+  },
+  {
+    title: "Claude Haiku scores all three",
+    desc: "A fast Claude Haiku pass evaluates every response on Relevance, Faithfulness, and Safety (0–100). Haiku is explicitly instructed not to favour Claude.",
+    color: "#ff9f6b",
+  },
+  {
+    title: "Results in Compare & Analyze",
+    desc: "Compare shows responses side by side. Analyze breaks down timing, token usage, eval scores, approach descriptors, and an honest verdict on which model suited your prompt best.",
+    color: "#a78bfa",
+  },
+];
+
 const MODELS = [
   { key: "claude", label: "Claude Sonnet 4.6", maker: "Anthropic", dot: "#ff9f6b" },
   { key: "openai", label: "GPT-5.4",           maker: "OpenAI",    dot: "#63d68d" },
@@ -144,8 +179,9 @@ export default function Home() {
   const [usage,     setUsage]     = useState<Record<string,{input:number;output:number}>>({});
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
-  const [gated,     setGated]     = useState(false);
-  const [attempts,  setAttempts]  = useState(getAttempts());
+  const [gated,          setGated]          = useState(false);
+  const [attempts,       setAttempts]       = useState(getAttempts());
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   // Track per-card scroll-to-bottom to hide fade gradient when fully scrolled
   const [atBottom,  setAtBottom]  = useState<Record<string, boolean>>({});
 
@@ -325,17 +361,20 @@ export default function Home() {
         }}>
           Frontier Pulse
         </span>
-        {/* Attempt counter */}
-        <div style={{ minWidth:110, display:"flex", justifyContent:"flex-end" }}>
-          {attempts > 0 && !gated && (
-            <span style={{
-              fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
-              color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
-              letterSpacing:"0.01em",
-            }}>
-              {attempts} of {FREE_LIMIT} today
-            </span>
-          )}
+        {/* Right side: How it works + attempt counter */}
+        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          {ghostBtn("How it works", () => setShowHowItWorks(true))}
+          <div style={{ minWidth:90, display:"flex", justifyContent:"flex-end" }}>
+            {attempts > 0 && !gated && (
+              <span style={{
+                fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
+                color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
+                letterSpacing:"0.01em",
+              }}>
+                {attempts} of {FREE_LIMIT} today
+              </span>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -758,6 +797,100 @@ export default function Home() {
 
         </div>
       </main>
+
+      {/* ── "How it works" modal ── */}
+      {showHowItWorks && (
+        <>
+          {/* Backdrop — click to close */}
+          <div
+            onClick={() => setShowHowItWorks(false)}
+            style={{
+              position:"fixed", inset:0, zIndex:200,
+              background:"rgba(0,0,0,0.78)",
+              backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)",
+              animation:"fadeIn 0.2s ease both",
+            }}
+          />
+
+          {/* Modal card */}
+          <div style={{
+            position:"fixed", zIndex:201,
+            top:"50%", left:"50%",
+            transform:"translate(-50%, -50%)",
+            width:"min(560px, calc(100vw - 40px))",
+            maxHeight:"calc(100vh - 80px)",
+            overflowY:"auto",
+            scrollbarWidth:"none",
+            background:"#1c1c1e",
+            border:"1px solid rgba(255,255,255,0.12)",
+            borderRadius:24,
+            padding:"32px 36px 36px",
+            animation:"fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) both",
+          }}>
+
+            {/* Header */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28 }}>
+              <div>
+                <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:20, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:5 }}>
+                  How Frontier Pulse works
+                </h2>
+                <p style={{ fontSize:13, color:"#8e8e93", fontFamily:"'Figtree',sans-serif" }}>
+                  What happens from the moment you hit Compare
+                </p>
+              </div>
+              {iconBtn("✕", "Close", () => setShowHowItWorks(false))}
+            </div>
+
+            {/* Steps timeline */}
+            <div style={{ display:"flex", flexDirection:"column" }}>
+              {HOW_IT_WORKS_STEPS.map((step, i) => (
+                <div
+                  key={i}
+                  className="hiw-step"
+                  style={{ animationDelay:`${i * 0.07}s`, display:"flex", gap:16 }}
+                >
+                  {/* Left column: numbered circle + connecting line */}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0 }}>
+                    <div style={{
+                      width:30, height:30, borderRadius:"50%", flexShrink:0,
+                      background:`${step.color}14`,
+                      border:`1.5px solid ${step.color}55`,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                    }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:step.color, fontFamily:"'Sora',sans-serif" }}>
+                        {i + 1}
+                      </span>
+                    </div>
+                    {/* Vertical connector — hidden on last step */}
+                    {i < HOW_IT_WORKS_STEPS.length - 1 && (
+                      <div style={{ width:1, flex:1, minHeight:20, background:"rgba(255,255,255,0.07)", margin:"5px 0" }} />
+                    )}
+                  </div>
+
+                  {/* Right column: title + description */}
+                  <div style={{ paddingBottom: i < HOW_IT_WORKS_STEPS.length - 1 ? 20 : 0, paddingTop:4 }}>
+                    <div style={{ fontFamily:"'Sora',sans-serif", fontSize:14, fontWeight:600, color:"#f5f5f7", marginBottom:6, lineHeight:1.3 }}>
+                      {step.title}
+                    </div>
+                    <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#8e8e93", lineHeight:1.72, margin:0 }}>
+                      {step.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer note */}
+            <div style={{ marginTop:24, padding:"14px 18px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12 }}>
+              <p style={{ fontSize:12, color:"#6e6e73", fontFamily:"'Figtree',sans-serif", lineHeight:1.65, margin:0 }}>
+                Your prompt is never stored. All content is sent directly to Anthropic, OpenAI, and Google APIs and discarded after the response is returned.
+              </p>
+            </div>
+
+          </div>
+        </>
+      )}
+
     </>
   );
 }
