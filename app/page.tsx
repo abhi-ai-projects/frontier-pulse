@@ -55,7 +55,7 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     title: "Sent to 3 models simultaneously",
-    desc: "Your prompt reaches Anthropic, OpenAI, and Google's APIs at the exact same moment using Promise.allSettled — not sequentially. The timing differences you see are real.",
+    desc: "Your prompt reaches Anthropic, OpenAI, and Google's APIs at the exact same moment — not sequentially. The timing differences you see are real.",
     color: "#6ab4f5",
   },
   {
@@ -65,7 +65,7 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     title: "Claude Haiku scores all three",
-    desc: "A fast Claude Haiku pass evaluates every response on Relevance, Faithfulness, and Safety (0–100). Haiku is explicitly instructed not to favour Claude.",
+    desc: "A fast Claude Haiku pass evaluates every response on three dimensions (0–100 each). Relevance: did it actually answer your question? Faithfulness: are the claims grounded, or made up? Safety: is it appropriate for professional use?",
     color: "#ff9f6b",
   },
   {
@@ -407,7 +407,7 @@ export default function Home() {
               color: attempts >= FREE_LIMIT ? "#ff9f6b" : "#c7c7cc",
               letterSpacing:"0.01em",
             }}>
-              {FREE_LIMIT - attempts} left
+              {attempts}/{FREE_LIMIT}
             </span>
           )}
         </div>
