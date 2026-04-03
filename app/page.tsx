@@ -402,27 +402,46 @@ export default function Home() {
           onClick={newPrompt}
           aria-label="Home"
           style={{ display:"flex", alignItems:"center", gap:11, background:"none", border:"none", cursor:"pointer", padding:0 }}>
-          <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
-            <circle cx="4"  cy="11" r="3.5" fill="#ff9f6b"/>
-            <circle cx="11" cy="11" r="3.5" fill="#63d68d"/>
-            <circle cx="18" cy="11" r="3.5" fill="#6ab4f5"/>
-            <line x1="7.5"  y1="11" x2="8.5"  y2="11" stroke="#2a2a2a" strokeWidth="1.5"/>
-            <line x1="13.5" y1="11" x2="14.5" y2="11" stroke="#2a2a2a" strokeWidth="1.5"/>
+          <svg width="32" height="24" viewBox="0 0 28 18" fill="none">
+            <circle cx="4"  cy="9" r="4" fill="#ff9f6b"/>
+            <circle cx="14" cy="9" r="4" fill="#63d68d"/>
+            <circle cx="24" cy="9" r="4" fill="#6ab4f5"/>
           </svg>
-          <span style={{ fontFamily:"'Sora',sans-serif", fontSize:20, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
+          <span style={{ fontFamily:"'Sora',sans-serif", fontSize:22, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
             Frontier Pulse
           </span>
         </button>
 
-        {/* Right side: How it works (text on desktop, ⓘ on mobile) + counter (desktop only) */}
+        {/* Right side: How it works (icon+text on desktop, icon-only on mobile) + counter (desktop only) */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          {/* Desktop: text ghost buttons */}
-          <div className="nav-how-text">
-            {ghostBtn("About", () => { trackModalOpened("about"); setShowAboutModal(true); })}
-            {ghostBtn("How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
+          {/* Desktop: icon + text ghost buttons */}
+          <div className="nav-how-text" style={{ gap:8 }}>
+            <button
+              onClick={() => { trackModalOpened("about"); setShowAboutModal(true); }}
+              style={{ fontSize:12, color:"#8e8e93", background:"none", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"6px 12px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.2s ease", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}
+              onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.24)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M4 17c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              About
+            </button>
+            <button
+              onClick={() => { trackModalOpened("how_it_works"); setShowHowItWorks(true); }}
+              style={{ fontSize:12, color:"#8e8e93", background:"none", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"6px 12px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.2s ease", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}
+              onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.24)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="10" cy="10" r="8.5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M10 9v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="10" cy="6.5" r="0.75" fill="currentColor"/>
+              </svg>
+              How it works
+            </button>
           </div>
           {/* Mobile: icon-only buttons — person for About, ⓘ for How it works */}
-          <div className="nav-how-icon" style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <div className="nav-how-icon" style={{ alignItems:"center", gap:6 }}>
             {/* Person icon — About */}
             <button
               onClick={() => { trackModalOpened("about"); setShowAboutModal(true); }}
@@ -1009,10 +1028,10 @@ export default function Home() {
               <img
                 src="/abhi.jpg"
                 alt="Abhi"
-                width={110}
-                height={110}
+                width={130}
+                height={130}
                 style={{
-                  width:110, height:110, borderRadius:"50%",
+                  width:130, height:130, borderRadius:"50%",
                   objectFit:"cover",
                   border:"2px solid rgba(255,255,255,0.14)",
                 }}
@@ -1021,7 +1040,7 @@ export default function Home() {
 
             {/* Name block — centered */}
             <div style={{ textAlign:"center", marginBottom:22 }}>
-              <div style={{ fontFamily:"'Sora',sans-serif", fontSize:20, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:4 }}>
+              <div style={{ fontFamily:"'Sora',sans-serif", fontSize:17, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:4 }}>
                 Abhi
               </div>
               <div style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#6e6e73" }}>
@@ -1032,16 +1051,16 @@ export default function Home() {
             {/* Bio — two paragraphs */}
             <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:22 }}>
               <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:0 }}>
-                I built Frontier Pulse as a research &amp; experimentation project in Q1 2026. The idea came from a simple need: a clean, honest way to compare frontier models with no affiliation bias. The side-by-side comparison is designed to help you see subtle differences in the latest models — in real time, on a topic relevant to you.
+                Frontier Pulse started as a personal research project in early 2026, built around one question: what does it actually look like when frontier models reason differently? The idea came from a simple need: a clean, honest way to compare frontier models with no affiliation bias. The side-by-side comparison is designed to help you see subtle differences in the latest models — in real time, on a topic relevant to you.
               </p>
               <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:0 }}>
-                Mumbai-born, based in Chicago for the past decade. I&apos;ve worked with enterprise customers across Public Sector, FSI, Healthcare &amp; Life Sciences, Manufacturing, and Tech. Most recently I&apos;ve been deep in AI infrastructure, and I&apos;m very much an enthusiast. If you&apos;re building with Google AI Studio or Claude Code — let&apos;s chat.
+                A little bit about me, I&apos;m a native of Mumbai and currently a Cloud &amp; AI practitioner based in Chicago with a decade of enterprise experience across Public Sector, FSI, Healthcare &amp; Life Sciences, Manufacturing, and Tech. My current work sits at the intersection of AI infrastructure and customer strategy — which means I spend a lot of time thinking about how these models behave under real conditions, not ideal ones. If you&apos;re building with Google AI Studio or Claude Code, let&apos;s talk!
               </p>
             </div>
 
             {/* LinkedIn CTA */}
             <a
-              href="https://www.linkedin.com/in/abhinavharchandani/"
+              href="https://www.linkedin.com/in/abhinav-harchandani/"
               target="_blank"
               rel="noopener noreferrer"
               style={{
