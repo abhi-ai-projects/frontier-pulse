@@ -81,7 +81,7 @@ const MODELS = [
   { key: "gemini", label: "Gemini 3.1 Pro",    maker: "Google",    dot: "#6ab4f5" },
 ];
 
-// Removed num field; renamed ANALYSIS → ANALYZE
+// ─── Section navigation ───────────────────────────────────────────────────────
 const NAV_ITEMS: { id: Section; label: string }[] = [
   { id: "prompt",   label: "PROMPT"  },
   { id: "compare",  label: "COMPARE" },
@@ -181,6 +181,9 @@ function buildFingerprint(): string {
     return (h >>> 0).toString(36);
   } catch { return "unknown"; }
 }
+// ─── Text utilities ───────────────────────────────────────────────────────────
+// stripMarkdown: used for clipboard copy so plain text doesn't include syntax.
+// estReadTime:   rough human-readable reading estimate shown in the Analyze tab.
 function stripMarkdown(t: string) {
   return t.replace(/#{1,6}\s+/g,"").replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1")
     .replace(/^[-*]\s+/gm,"• ").replace(/^(\d+)\.\s+/gm,"$1. ")
@@ -194,6 +197,22 @@ function estReadTime(outputTokens: number): string {
   return `~${Math.round(mins)}m read`;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Home — single-page root component
+//
+// State map:
+//   section        — which of the three tabs is visible (prompt / compare / analysis)
+//   task           — active TASK_CATEGORY (write / analyze / decide)
+//   prompt         — user's current input string
+//   responses      — { claude, openai, gemini } text from the API call
+//   insights       — structured Haiku eval output (scores + qualitative notes)
+//   timing/usage   — per-model timing (ms) and token counts
+//   loading        — true while API request is in flight
+//   error          — user-facing error string
+//   attempts/gated — localStorage-backed daily usage gate
+//   show*Modal     — visibility flags for the three overlay modals
+//   atBottom       — per card, whether scrolled to the bottom (hides fade gradient)
+// ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const [section,   setSection]   = useState<Section>("prompt");
   const [task,      setTask]      = useState(TASK_CATEGORIES[0]);
@@ -281,6 +300,10 @@ export default function Home() {
     };
   }, [showAboutModal, showHowItWorks, showLimitModal]);
 
+  // ─── Core comparison handler ────────────────────────────────────────────────
+  // Fires after the user clicks Compare. Runs client-side gate first (fast),
+  // then sends prompt + systemContext to POST /api/compare which calls all 3
+  // model APIs in parallel and returns responses, insights, timing, and usage.
   const compare = async () => {
     if (!prompt.trim()) return;
     // Client-side gate: fast check before spending a round-trip
@@ -322,16 +345,21 @@ export default function Home() {
       setInsights(data.insights  || null);
       setTiming(data.timing      || {});
       setUsage(data.usage        || {});
-      // Analytics: fire after all state is set so timing data is available
+      // Analytics: fire after all state is set so timing data is available.
+      // bestOf computes the winning model for each eval dimension from numeric scores
+      // since the API returns per-model numerics, not a pre-computed winner field.
       if (data.timing && data.insights) {
+        const ins = data.insights as Insights;
+        const bestOf = (scores: [string, number][]) =>
+          scores.reduce((a, b) => b[1] > a[1] ? b : a)[0];
         trackComparisonComplete({
-          claudeTime:      data.timing.claude  ?? 0,
-          openaiTime:      data.timing.openai  ?? 0,
-          geminiTime:      data.timing.gemini  ?? 0,
-          bestRelevance:   data.insights.bestRelevanceModel   ?? "",
-          bestFaithfulness:data.insights.bestFaithfulnessModel ?? "",
-          bestSafety:      data.insights.bestSafetyModel      ?? "",
-          taskContext:     task.id,
+          claudeTime:       data.timing.claude  ?? 0,
+          openaiTime:       data.timing.openai  ?? 0,
+          geminiTime:       data.timing.gemini  ?? 0,
+          bestRelevance:    bestOf([["claude", ins.claudeRelevance], ["openai", ins.openaiRelevance], ["gemini", ins.geminiRelevance]]),
+          bestFaithfulness: bestOf([["claude", ins.claudeFaithfulness], ["openai", ins.openaiFaithfulness], ["gemini", ins.geminiFaithfulness]]),
+          bestSafety:       bestOf([["claude", ins.claudeSafety], ["openai", ins.openaiSafety], ["gemini", ins.geminiSafety]]),
+          taskContext:      task.id,
         });
       }
     } catch { setError("Network error — check your connection."); }
