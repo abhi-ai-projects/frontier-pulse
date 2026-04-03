@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         const msg = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
           max_tokens: 1000,
-          temperature: 1.0,
+          temperature: 0.7,
           system: unifiedSystem,
           messages: [{ role: "user", content: sanitized }],
         });
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
         const completion = await openai.chat.completions.create({
           model: "gpt-5.4",
           max_completion_tokens: 1000,
-          temperature: 1.0,
+          temperature: 0.7,
           messages: [
             { role: "system", content: unifiedSystem },
             { role: "user",   content: sanitized },
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
             // maxOutputTokens = thinkingBudget (1024) + target response (1024), matching
             // Claude and GPT at ~1000 tokens net.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            generationConfig: { maxOutputTokens: 2048, temperature: 1.0, stopSequences: [], thinkingConfig: { thinkingBudget: 1024 } } as any,
+            generationConfig: { maxOutputTokens: 2048, temperature: 0.7, stopSequences: [], thinkingConfig: { thinkingBudget: 512 } } as any,
           });
           const candidate = result.response.candidates?.[0];
           const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();

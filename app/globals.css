@@ -210,8 +210,11 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
 .nav-how-text        { display: flex; gap: 8px; }
 .nav-how-icon        { display: none; }
 /* Counter: in nav on desktop, in textarea footer on mobile */
-.nav-counter-desktop   { display: inline; }
+.nav-counter-desktop   { display: flex; align-items: center; gap: 8px; }
 .input-counter-mobile  { display: none; }
+
+/* Scroll lock — applied via JS when any modal is open */
+body.modal-open { overflow: hidden; position: fixed; width: 100%; }
 
 @media (max-width: 768px) {
   .side-nav-desktop    { display: none !important; }
@@ -220,7 +223,7 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
   .top-nav             { padding: 10px 16px !important; }
   .nav-how-text        { display: none; }
   .nav-how-icon        { display: flex; }
-  .nav-counter-desktop  { display: none; }
+  .nav-counter-desktop  { display: none !important; }
   .input-counter-mobile { display: inline; }
   .prompt-textarea      { min-height: 190px !important; }
 

@@ -256,6 +256,31 @@ export default function Home() {
     });
   }, [responses]);
 
+  // Lock body scroll when any modal is open (iOS-safe: save + restore scroll position)
+  useEffect(() => {
+    const isOpen = showAboutModal || showHowItWorks || showLimitModal;
+    if (isOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+    } else {
+      const top = document.body.style.top;
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (top) window.scrollTo(0, parseInt(top) * -1);
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+    };
+  }, [showAboutModal, showHowItWorks, showLimitModal]);
+
   const compare = async () => {
     if (!prompt.trim()) return;
     // Client-side gate: fast check before spending a round-trip
@@ -460,14 +485,13 @@ export default function Home() {
               ⓘ
             </button>
           </div>
-          {/* Usage pill — desktop nav only; click opens limit modal */}
-          {attempts > 0 && !gated && (
+          {/* Usage pill — desktop nav only; always visible (hidden on mobile via CSS), click opens limit modal */}
+          {!gated && (
             <button
               className="nav-counter-desktop"
               onClick={() => setShowLimitModal(true)}
               title="About daily limits"
               style={{
-                display:"flex", alignItems:"center", gap:8,
                 background:"rgba(255,255,255,0.05)",
                 border:"1px solid rgba(255,255,255,0.09)",
                 borderRadius:100, padding:"5px 12px",
@@ -484,7 +508,7 @@ export default function Home() {
                 }} />
               </div>
               <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:600, color:"#c7c7cc", letterSpacing:"0.01em" }}>
-                {attempts}/{FREE_LIMIT}
+                {attempts === 0 ? "10 free" : `${attempts}/${FREE_LIMIT}`}
               </span>
             </button>
           )}
@@ -939,7 +963,7 @@ export default function Home() {
             background:"rgba(0,0,0,0.80)",
             backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
             display:"flex", alignItems:"center", justifyContent:"center",
-            padding:"20px",
+            padding:"20px", overflowY:"auto",
             animation:"fadeIn 0.2s ease both",
           }}
         >
@@ -947,18 +971,22 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
             style={{
               width:"100%", maxWidth:360,
+              maxHeight:"calc(100dvh - 40px)",
+              display:"flex", flexDirection:"column",
               background:"#1c1c1e",
               border:"1px solid rgba(255,255,255,0.12)",
               borderRadius:20,
-              padding:"28px 28px 24px",
+              overflow:"hidden",
               animation:"fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) both",
-              position:"relative",
             }}
           >
-            {/* Close */}
-            <div style={{ position:"absolute", top:16, right:16 }}>
+            {/* Sticky header row — close button always visible */}
+            <div style={{ display:"flex", justifyContent:"flex-end", padding:"16px 16px 0", flexShrink:0 }}>
               {iconBtn("✕", "Close", () => setShowLimitModal(false))}
             </div>
+
+            {/* Scrollable content */}
+            <div style={{ overflowY:"auto", padding:"8px 28px 24px", flex:1 }}>
 
             {/* Icon */}
             <div style={{
@@ -988,6 +1016,12 @@ export default function Home() {
                 }
               </span>
             </div>
+
+            {/* Fingerprinting note */}
+            <p style={{ marginTop:12, fontSize:11, fontFamily:"'Figtree',sans-serif", color:"#6e6e73", lineHeight:1.6 }}>
+              Usage is tracked per device across browsers — switching to incognito or a different browser on the same device won&apos;t reset your count.
+            </p>
+            </div>{/* end scrollable content */}
           </div>
         </div>
       )}
@@ -1001,7 +1035,7 @@ export default function Home() {
             background:"rgba(0,0,0,0.80)",
             backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
             display:"flex", alignItems:"center", justifyContent:"center",
-            padding:"20px",
+            padding:"20px", overflowY:"auto",
             animation:"fadeIn 0.2s ease both",
           }}
         >
@@ -1009,18 +1043,22 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
             style={{
               width:"100%", maxWidth:400,
+              maxHeight:"calc(100dvh - 40px)",
+              display:"flex", flexDirection:"column",
               background:"#1c1c1e",
               border:"1px solid rgba(255,255,255,0.12)",
               borderRadius:24,
-              padding:"28px 28px 24px",
+              overflow:"hidden",
               animation:"fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) both",
-              position:"relative",
             }}
           >
-            {/* Close */}
-            <div style={{ position:"absolute", top:16, right:16 }}>
+            {/* Sticky header row — close button always visible */}
+            <div style={{ display:"flex", justifyContent:"flex-end", padding:"16px 16px 0", flexShrink:0 }}>
               {iconBtn("✕", "Close", () => setShowAboutModal(false))}
             </div>
+
+            {/* Scrollable content */}
+            <div style={{ overflowY:"auto", padding:"4px 28px 24px", flex:1 }}>
 
             {/* Photo — centered */}
             <div style={{ display:"flex", justifyContent:"center", marginBottom:18 }}>
@@ -1080,13 +1118,13 @@ export default function Home() {
               </svg>
               Connect on LinkedIn
             </a>
+            </div>{/* end scrollable content */}
           </div>
         </div>
       )}
 
       {/* ── "How it works" modal ── */}
       {showHowItWorks && (
-        // Backdrop doubles as the flex centering container — avoids fixed-inside-transform bugs
         <div
           onClick={() => setShowHowItWorks(false)}
           style={{
@@ -1094,7 +1132,7 @@ export default function Home() {
             background:"rgba(0,0,0,0.80)",
             backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
             display:"flex", alignItems:"center", justifyContent:"center",
-            padding:"20px",
+            padding:"20px", overflowY:"auto",
             animation:"fadeIn 0.2s ease both",
           }}
         >
@@ -1103,20 +1141,17 @@ export default function Home() {
             onClick={e => e.stopPropagation()}
             style={{
               width:"100%", maxWidth:540,
-              maxHeight:"calc(100vh - 80px)",
-              overflowY:"auto",
-              scrollbarWidth:"thin",
-              scrollbarColor:"rgba(255,255,255,0.15) transparent",
+              maxHeight:"calc(100dvh - 40px)",
+              display:"flex", flexDirection:"column",
               background:"#1c1c1e",
               border:"1px solid rgba(255,255,255,0.12)",
               borderRadius:24,
-              padding:"28px 30px 30px",
+              overflow:"hidden",
               animation:"fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) both",
-              position:"relative",
             }}
           >
-            {/* Header */}
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24 }}>
+            {/* Sticky header — always visible */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", padding:"28px 30px 0", flexShrink:0 }}>
               <div>
                 <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:19, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:4 }}>
                   How Frontier Pulse works
@@ -1127,6 +1162,9 @@ export default function Home() {
               </div>
               {iconBtn("✕", "Close", () => setShowHowItWorks(false))}
             </div>
+
+            {/* Scrollable content */}
+            <div style={{ overflowY:"auto", padding:"24px 30px 30px", flex:1, scrollbarWidth:"thin", scrollbarColor:"rgba(255,255,255,0.15) transparent" }}>
 
             {/* Steps */}
             <div style={{ display:"flex", flexDirection:"column" }}>
@@ -1234,6 +1272,7 @@ export default function Home() {
               onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; }}>
               About the creator →
             </button>
+            </div>{/* end scrollable content */}
           </div>
         </div>
       )}
