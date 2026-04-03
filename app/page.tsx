@@ -127,14 +127,22 @@ function incrementAttempts() {
   return next;
 }
 
-/** Human-readable local time when the current 24h window expires. */
+/** Human-readable reset label: "Today at 9:42 PM" or "Tomorrow at 9:42 PM". */
 function getResetTime(): string {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return "24h from first use";
     const { firstUse } = JSON.parse(raw) as SessionRecord;
     if (!firstUse) return "24h from first use";
-    return new Date(firstUse + WINDOW_MS).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const resetAt  = new Date(firstUse + WINDOW_MS);
+    const today    = new Date();
+    const isToday  = resetAt.toDateString() === today.toDateString();
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const isTomorrow = resetAt.toDateString() === tomorrow.toDateString();
+    const timeStr  = resetAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (isToday)    return `Today at ${timeStr}`;
+    if (isTomorrow) return `Tomorrow at ${timeStr}`;
+    return `${resetAt.toLocaleDateString([], { weekday:"short", month:"short", day:"numeric" })} at ${timeStr}`;
   } catch { return "24h from first use"; }
 }
 
