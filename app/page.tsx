@@ -952,6 +952,34 @@ export default function Home() {
           )}
 
         </div>
+
+        {/* ── Site footer ── */}
+        <footer style={{
+          marginTop: 48,
+          paddingBottom: 24,
+          textAlign: "center",
+        }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:16, flexWrap:"wrap" }}>
+            <a
+              href="/privacy"
+              style={{ fontSize:11, color:"#6e6e73", textDecoration:"none", fontFamily:"'Figtree',sans-serif", transition:"color 0.2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color="#a1a1a6"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color="#6e6e73"; }}
+            >
+              Privacy Policy
+            </a>
+            <span style={{ fontSize:11, color:"#3a3a3c" }}>·</span>
+            <a
+              href="mailto:abhi.ai.dogfood@gmail.com"
+              style={{ fontSize:11, color:"#6e6e73", textDecoration:"none", fontFamily:"'Figtree',sans-serif", transition:"color 0.2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color="#a1a1a6"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color="#6e6e73"; }}
+            >
+              Contact
+            </a>
+          </div>
+        </footer>
+
       </main>
 
       {/* ── Daily limit modal ── */}
