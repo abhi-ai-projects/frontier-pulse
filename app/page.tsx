@@ -209,6 +209,7 @@ export default function Home() {
   const [gated,          setGated]          = useState(() => getAttempts() >= FREE_LIMIT);
   const [showHowItWorks,  setShowHowItWorks]  = useState(false);
   const [showLimitModal,  setShowLimitModal]  = useState(false);
+  const [showAboutModal,  setShowAboutModal]  = useState(false);
   // Track per-card scroll-to-bottom to hide fade gradient when fully scrolled
   const [atBottom,  setAtBottom]  = useState<Record<string, boolean>>({});
 
@@ -415,8 +416,9 @@ export default function Home() {
 
         {/* Right side: How it works (text on desktop, ⓘ on mobile) + counter (desktop only) */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          {/* Desktop: text ghost button */}
-          <div className="nav-how-text">
+          {/* Desktop: text ghost buttons */}
+          <div className="nav-how-text" style={{ display:"flex", gap:8 }}>
+            {ghostBtn("About", () => { trackModalOpened("about"); setShowAboutModal(true); })}
             {ghostBtn("How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
           </div>
           {/* Mobile: borderless white ⓘ — clean, no box */}
@@ -960,6 +962,115 @@ export default function Home() {
         </div>
       )}
 
+      {/* ── About modal ── */}
+      {showAboutModal && (
+        <div
+          onClick={() => setShowAboutModal(false)}
+          style={{
+            position:"fixed", inset:0, zIndex:200,
+            background:"rgba(0,0,0,0.80)",
+            backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            padding:"20px",
+            animation:"fadeIn 0.2s ease both",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width:"100%", maxWidth:400,
+              background:"#1c1c1e",
+              border:"1px solid rgba(255,255,255,0.12)",
+              borderRadius:24,
+              padding:"28px 28px 24px",
+              animation:"fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) both",
+              position:"relative",
+            }}
+          >
+            {/* Close */}
+            <div style={{ position:"absolute", top:16, right:16 }}>
+              {iconBtn("✕", "Close", () => setShowAboutModal(false))}
+            </div>
+
+            {/* Photo + name block */}
+            <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:20 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/abhi.jpg"
+                alt="Abhi"
+                width={72}
+                height={72}
+                style={{
+                  width:72, height:72, borderRadius:"50%",
+                  objectFit:"cover", flexShrink:0,
+                  border:"2px solid rgba(255,255,255,0.12)",
+                }}
+              />
+              <div>
+                <div style={{ fontFamily:"'Sora',sans-serif", fontSize:16, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.02em", marginBottom:3 }}>
+                  Abhi Harchandani
+                </div>
+                <div style={{ fontFamily:"'Figtree',sans-serif", fontSize:12, color:"#6e6e73", lineHeight:1.5 }}>
+                  Senior Technical Account Manager<br />
+                  Google Cloud · Chicago
+                </div>
+              </div>
+            </div>
+
+            {/* Bio */}
+            <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:"0 0 20px" }}>
+              I&apos;ve spent the past three years in the room where model selection decisions get made — evaluating Gemini, Claude, and GPT under real enterprise conditions for Global 500 companies. Frontier Pulse came from a simple need: a clean, honest way to compare frontier models with no affiliation bias. Building it publicly, while working at Google, is an intentional choice. The results speak for themselves.
+            </p>
+
+            {/* Credential chips */}
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:22 }}>
+              {[
+                { label:"Google Cloud", color:"#4285f4" },
+                { label:"CMU MISM",     color:"#c41230" },
+                { label:"U.S. AI/ML NIW",  color:"#63d68d" },
+              ].map(chip => (
+                <div key={chip.label} style={{
+                  display:"inline-flex", alignItems:"center", gap:5,
+                  padding:"4px 12px",
+                  background:`${chip.color}12`,
+                  border:`1px solid ${chip.color}35`,
+                  borderRadius:100,
+                }}>
+                  <div style={{ width:5, height:5, borderRadius:"50%", background:chip.color, flexShrink:0 }} />
+                  <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:600, color:chip.color, whiteSpace:"nowrap" }}>
+                    {chip.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* LinkedIn CTA */}
+            <a
+              href="https://www.linkedin.com/in/abhinavharchandani/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                width:"100%", padding:"11px 0",
+                background:"rgba(10,102,194,0.15)",
+                border:"1px solid rgba(10,102,194,0.35)",
+                borderRadius:12,
+                fontFamily:"'Sora',sans-serif", fontSize:13, fontWeight:600,
+                color:"#6ab4f5", textDecoration:"none",
+                transition:"background 0.2s ease, border-color 0.2s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background="rgba(10,102,194,0.25)"; e.currentTarget.style.borderColor="rgba(10,102,194,0.55)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background="rgba(10,102,194,0.15)"; e.currentTarget.style.borderColor="rgba(10,102,194,0.35)"; }}>
+              {/* LinkedIn icon */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+              Connect on LinkedIn
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* ── "How it works" modal ── */}
       {showHowItWorks && (
         // Backdrop doubles as the flex centering container — avoids fixed-inside-transform bugs
@@ -1096,6 +1207,20 @@ export default function Home() {
                 Your prompt is never stored. Content is sent directly to Anthropic, OpenAI, and Google APIs and discarded after the response is returned.
               </p>
             </div>
+
+            {/* About the creator link — mobile-friendly footer CTA */}
+            <button
+              onClick={() => { setShowHowItWorks(false); setShowAboutModal(true); }}
+              style={{
+                display:"block", width:"100%", marginTop:14, textAlign:"center",
+                fontSize:12, fontFamily:"'Sora',sans-serif", fontWeight:500,
+                color:"#6e6e73", background:"none", border:"none", cursor:"pointer",
+                padding:"6px 0", transition:"color 0.2s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color="#a1a1a6"; }}
+              onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; }}>
+              About the creator →
+            </button>
           </div>
         </div>
       )}
