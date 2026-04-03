@@ -47,6 +47,10 @@ function effectiveCount(rec: WindowRecord | null, now: number): number {
 export interface RateLimitResult {
   allowed:      boolean;
   attemptsLeft: number;
+  /** Unix ms timestamp of the first request in this rolling window.
+   *  Returned so the client can display an accurate reset time even when
+   *  localStorage is empty (incognito, fresh browser, storage cleared). */
+  windowStart:  number;
 }
 
 /**
@@ -62,7 +66,7 @@ export async function checkRateLimit(
   // ── Batch-test bypass ─────────────────────────────────────────────────────
   const secret = process.env.BATCH_SECRET;
   if (secret && batchKey === secret) {
-    return { allowed: true, attemptsLeft: DAILY_LIMIT };
+    return { allowed: true, attemptsLeft: DAILY_LIMIT, windowStart: Date.now() };
   }
 
   const now   = Date.now();
@@ -82,7 +86,7 @@ export async function checkRateLimit(
       // Enforce the stricter of IP vs fingerprint
       const current = Math.max(effectiveCount(ipRec, now), effectiveCount(fpRec, now));
       if (current >= DAILY_LIMIT) {
-        return { allowed: false, attemptsLeft: 0 };
+        return { allowed: false, attemptsLeft: 0, windowStart: Date.now() };
       }
 
       const newCount = current + 1;
@@ -98,20 +102,23 @@ export async function checkRateLimit(
           : Promise.resolve(),
       ]);
 
-      return { allowed: true, attemptsLeft: DAILY_LIMIT - newCount };
+      // windowStart: fingerprint is the most reliable per-device signal; fall back to IP.
+      // The client uses this to display an accurate reset time even across incognito sessions.
+      const windowStart = fpKey ? fpFirstUse : ipFirstUse;
+      return { allowed: true, attemptsLeft: DAILY_LIMIT - newCount, windowStart };
     } catch (err) {
       // KV outage — fail open so users aren't locked out.
       // Client-side localStorage gate still provides a UX-level fallback.
       console.error("[rateLimit] KV error — failing open:", err);
-      return { allowed: true, attemptsLeft: 1 };
+      return { allowed: true, attemptsLeft: 1, windowStart: Date.now() };
     }
   }
 
   // ── In-memory fallback (local dev) ────────────────────────────────────────
   const existing = memory.get(ipKey) ?? null;
   const current  = effectiveCount(existing, now);
-  if (current >= DAILY_LIMIT) return { allowed: false, attemptsLeft: 0 };
+  if (current >= DAILY_LIMIT) return { allowed: false, attemptsLeft: 0, windowStart: Date.now() };
   const firstUse = (existing && now - existing.firstUse <= WINDOW_MS) ? existing.firstUse : now;
   memory.set(ipKey, { firstUse, count: current + 1 });
-  return { allowed: true, attemptsLeft: DAILY_LIMIT - (current + 1) };
+  return { allowed: true, attemptsLeft: DAILY_LIMIT - (current + 1), windowStart: firstUse };
 }

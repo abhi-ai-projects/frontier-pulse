@@ -9,7 +9,7 @@
  *   X-FP         browser fingerprint (anti-incognito-bypass)
  *   X-Batch-Key  batch-test bypass secret (matches BATCH_SECRET env var)
  *
- * Response (200): { claude, openai, gemini, insights, timing, usage, attemptsLeft }
+ * Response (200): { claude, openai, gemini, insights, timing, usage, attemptsLeft, windowStart }
  * Rate-limited (429): { error: string }
  * Bad input (400):    { error: string }
  */
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   // Batch-test bypass header (must match BATCH_SECRET env var)
   const batchKey    = req.headers.get("x-batch-key") ?? undefined;
 
-  const { allowed, attemptsLeft } = await checkRateLimit(ip, fingerprint, batchKey);
+  const { allowed, attemptsLeft, windowStart } = await checkRateLimit(ip, fingerprint, batchKey);
   if (!allowed) {
     return NextResponse.json(
       { error: "You've reached your 10 daily comparisons. Come back tomorrow — resets at midnight UTC." },
@@ -269,7 +269,8 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
     }
 
     // ── 9. Return response ─────────────────────────────────────────────────────
-    // attemptsLeft lets the client stay in sync with the server's authoritative count
+    // attemptsLeft + windowStart let the client stay in sync with the server's
+    // authoritative state — including the correct reset time even in incognito.
     return NextResponse.json({
       claude: claudeText,
       openai: openaiText,
@@ -278,6 +279,7 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
       timing,
       usage,
       attemptsLeft,
+      windowStart,
     });
 
   } catch (error) {

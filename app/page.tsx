@@ -114,10 +114,13 @@ function getSession(): SessionRecord {
 
 function getAttempts() { return getSession().count; }
 
-function setAttemptCount(n: number) {
-  const session  = getSession();
-  // Keep existing firstUse if still in the window; otherwise this is the first use
-  const firstUse = session.count > 0 ? session.firstUse : Date.now();
+function setAttemptCount(n: number, windowStart?: number) {
+  const session = getSession();
+  // Prefer windowStart from the server (authoritative) when provided — this is how
+  // the reset time stays accurate even in incognito or after localStorage is cleared.
+  // Falls back to session.firstUse which getSession() already validates (returns a
+  // fresh Date.now() if the 24h window has elapsed or localStorage was empty).
+  const firstUse = windowStart ?? session.firstUse;
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ firstUse, count: n }));
 }
 
@@ -333,10 +336,12 @@ export default function Home() {
         setError(data.error || "Something went wrong.");
         return;
       }
-      // Sync localStorage with the server's authoritative attempt count
+      // Sync localStorage with the server's authoritative count + window start time.
+      // Passing windowStart ensures the reset timer is accurate even in incognito
+      // or after localStorage has been cleared — the server's KV record is the truth.
       if (typeof data.attemptsLeft === "number") {
         const used = FREE_LIMIT - data.attemptsLeft;
-        setAttemptCount(used);
+        setAttemptCount(used, typeof data.windowStart === "number" ? data.windowStart : undefined);
         setAttempts(used);
       } else {
         setAttempts(incrementAttempts());
