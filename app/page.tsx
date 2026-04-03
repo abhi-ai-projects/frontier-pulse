@@ -188,7 +188,8 @@ export default function Home() {
   const [attempts,       setAttempts]       = useState(getAttempts());
   // Gate is true immediately if the user has already exhausted today's limit on load
   const [gated,          setGated]          = useState(() => getAttempts() >= FREE_LIMIT);
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showHowItWorks,  setShowHowItWorks]  = useState(false);
+  const [showLimitModal,  setShowLimitModal]  = useState(false);
   // Track per-card scroll-to-bottom to hide fade gradient when fully scrolled
   const [atBottom,  setAtBottom]  = useState<Record<string, boolean>>({});
 
@@ -376,8 +377,11 @@ export default function Home() {
         background:"rgba(0,0,0,0.80)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)",
         borderBottom:"1px solid rgba(255,255,255,0.07)",
       }}>
-        {/* Brand — logo mark + wordmark */}
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        {/* Brand — logo mark + wordmark, click to reset home */}
+        <button
+          onClick={newPrompt}
+          aria-label="Home"
+          style={{ display:"flex", alignItems:"center", gap:10, background:"none", border:"none", cursor:"pointer", padding:0 }}>
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <circle cx="4"  cy="11" r="3.5" fill="#ff9f6b"/>
             <circle cx="11" cy="11" r="3.5" fill="#63d68d"/>
@@ -388,7 +392,7 @@ export default function Home() {
           <span style={{ fontFamily:"'Sora',sans-serif", fontSize:17, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
             Frontier Pulse
           </span>
-        </div>
+        </button>
 
         {/* Right side: How it works (text on desktop, ⓘ on mobile) + counter (desktop only) */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -405,14 +409,21 @@ export default function Home() {
               ⓘ
             </button>
           </div>
-          {/* Usage pill — desktop nav only; mobile version lives in the textarea footer */}
+          {/* Usage pill — desktop nav only; click opens limit modal */}
           {attempts > 0 && !gated && (
-            <div className="nav-counter-desktop" style={{
-              display:"flex", alignItems:"center", gap:8,
-              background:"rgba(255,255,255,0.05)",
-              border:"1px solid rgba(255,255,255,0.09)",
-              borderRadius:100, padding:"5px 12px",
-            }}>
+            <button
+              className="nav-counter-desktop"
+              onClick={() => setShowLimitModal(true)}
+              title="About daily limits"
+              style={{
+                display:"flex", alignItems:"center", gap:8,
+                background:"rgba(255,255,255,0.05)",
+                border:"1px solid rgba(255,255,255,0.09)",
+                borderRadius:100, padding:"5px 12px",
+                cursor:"pointer", transition:"background 0.2s ease, border-color 0.2s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.09)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.18)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.09)"; }}>
               {/* Progress bar — green → orange as limit approaches */}
               <div style={{ width:44, height:2, background:"rgba(255,255,255,0.1)", borderRadius:1, overflow:"hidden" }}>
                 <div style={{
@@ -424,7 +435,7 @@ export default function Home() {
               <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:600, color:"#c7c7cc", letterSpacing:"0.01em" }}>
                 {attempts}/{FREE_LIMIT}
               </span>
-            </div>
+            </button>
           )}
         </div>
       </nav>
@@ -590,11 +601,14 @@ export default function Home() {
                     <span className="keyboard-hint" style={{ fontSize:11, color:"#8e8e93", fontFamily:"'Sora',sans-serif" }}>
                       {submitted ? "Running comparison…" : "⌘ Return to compare"}
                     </span>
-                    {/* Mobile: attempt counter lives here — contextually near Compare */}
+                    {/* Mobile: attempt counter lives here — taps to open limit modal */}
                     {!submitted && attempts > 0 && !gated && (
-                      <span className="input-counter-mobile" style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:500, color:"#8e8e93" }}>
+                      <button
+                        className="input-counter-mobile"
+                        onClick={() => setShowLimitModal(true)}
+                        style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:500, color:"#8e8e93", background:"none", border:"none", cursor:"pointer", padding:0 }}>
                         Attempt {attempts}/{FREE_LIMIT}
-                      </span>
+                      </button>
                     )}
                     <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                       {/* Char counter — brighter default */}
@@ -864,6 +878,65 @@ export default function Home() {
 
         </div>
       </main>
+
+      {/* ── Daily limit modal ── */}
+      {showLimitModal && (
+        <div
+          onClick={() => setShowLimitModal(false)}
+          style={{
+            position:"fixed", inset:0, zIndex:200,
+            background:"rgba(0,0,0,0.80)",
+            backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            padding:"20px",
+            animation:"fadeIn 0.2s ease both",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width:"100%", maxWidth:360,
+              background:"#1c1c1e",
+              border:"1px solid rgba(255,255,255,0.12)",
+              borderRadius:20,
+              padding:"28px 28px 24px",
+              animation:"fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) both",
+              position:"relative",
+            }}
+          >
+            {/* Close */}
+            <div style={{ position:"absolute", top:16, right:16 }}>
+              {iconBtn("✕", "Close", () => setShowLimitModal(false))}
+            </div>
+
+            {/* Icon */}
+            <div style={{
+              width:40, height:40, borderRadius:"50%",
+              background:"rgba(99,214,141,0.1)", border:"1.5px solid rgba(99,214,141,0.3)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:18, marginBottom:16,
+            }}>🔬</div>
+
+            {/* Title */}
+            <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:17, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:12 }}>
+              {FREE_LIMIT} comparisons / day
+            </h2>
+
+            {/* 2-sentence explanation */}
+            <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#8e8e93", lineHeight:1.75, margin:0 }}>
+              Running three frontier AI models simultaneously on every comparison has a real cost per query.
+              Ten daily comparisons keeps Frontier Pulse free and open while we&apos;re in research and experimentation mode — building responsibly before we scale.
+            </p>
+
+            {/* Reset note */}
+            <div style={{ marginTop:20, padding:"10px 14px", background:"rgba(255,255,255,0.04)", borderRadius:10, border:"1px solid rgba(255,255,255,0.07)" }}>
+              <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", color:"#6e6e73" }}>
+                Resets at <strong style={{ color:"#a1a1a6" }}>12:00 AM UTC</strong> · {attempts}/{FREE_LIMIT} used today
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── "How it works" modal ── */}
       {showHowItWorks && (
