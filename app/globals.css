@@ -206,8 +206,8 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
   animation: stepReveal 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
 }
 
-/* Nav: "How it works" — text on desktop, icon on mobile */
-.nav-how-text        { display: flex; }
+/* Nav: ghost buttons on desktop, icons on mobile */
+.nav-how-text        { display: flex; gap: 8px; }
 .nav-how-icon        { display: none; }
 /* Counter: in nav on desktop, in textarea footer on mobile */
 .nav-counter-desktop   { display: inline; }

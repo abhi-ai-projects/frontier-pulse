@@ -401,15 +401,15 @@ export default function Home() {
         <button
           onClick={newPrompt}
           aria-label="Home"
-          style={{ display:"flex", alignItems:"center", gap:10, background:"none", border:"none", cursor:"pointer", padding:0 }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          style={{ display:"flex", alignItems:"center", gap:11, background:"none", border:"none", cursor:"pointer", padding:0 }}>
+          <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
             <circle cx="4"  cy="11" r="3.5" fill="#ff9f6b"/>
             <circle cx="11" cy="11" r="3.5" fill="#63d68d"/>
             <circle cx="18" cy="11" r="3.5" fill="#6ab4f5"/>
             <line x1="7.5"  y1="11" x2="8.5"  y2="11" stroke="#2a2a2a" strokeWidth="1.5"/>
             <line x1="13.5" y1="11" x2="14.5" y2="11" stroke="#2a2a2a" strokeWidth="1.5"/>
           </svg>
-          <span style={{ fontFamily:"'Sora',sans-serif", fontSize:17, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
+          <span style={{ fontFamily:"'Sora',sans-serif", fontSize:20, fontWeight:700, letterSpacing:"-0.03em", color:"#f5f5f7" }}>
             Frontier Pulse
           </span>
         </button>
@@ -417,12 +417,23 @@ export default function Home() {
         {/* Right side: How it works (text on desktop, ⓘ on mobile) + counter (desktop only) */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           {/* Desktop: text ghost buttons */}
-          <div className="nav-how-text" style={{ display:"flex", gap:8 }}>
+          <div className="nav-how-text">
             {ghostBtn("About", () => { trackModalOpened("about"); setShowAboutModal(true); })}
             {ghostBtn("How it works", () => { trackModalOpened("how_it_works"); setShowHowItWorks(true); })}
           </div>
-          {/* Mobile: borderless white ⓘ — clean, no box */}
-          <div className="nav-how-icon">
+          {/* Mobile: icon-only buttons — person for About, ⓘ for How it works */}
+          <div className="nav-how-icon" style={{ display:"flex", alignItems:"center", gap:6 }}>
+            {/* Person icon — About */}
+            <button
+              onClick={() => { trackModalOpened("about"); setShowAboutModal(true); }}
+              aria-label="About"
+              style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 2px", lineHeight:1, color:"#f5f5f7", display:"flex", alignItems:"center" }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="10" cy="7" r="3" stroke="#f5f5f7" strokeWidth="1.5"/>
+                <path d="M4 17c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="#f5f5f7" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+            {/* ⓘ — How it works */}
             <button
               onClick={() => { trackModalOpened("how_it_works"); setShowHowItWorks(true); }}
               aria-label="How it works"
@@ -992,56 +1003,40 @@ export default function Home() {
               {iconBtn("✕", "Close", () => setShowAboutModal(false))}
             </div>
 
-            {/* Photo + name block */}
-            <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:20 }}>
+            {/* Photo — centered */}
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:18 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/abhi.jpg"
                 alt="Abhi"
-                width={72}
-                height={72}
+                width={110}
+                height={110}
                 style={{
-                  width:72, height:72, borderRadius:"50%",
-                  objectFit:"cover", flexShrink:0,
-                  border:"2px solid rgba(255,255,255,0.12)",
+                  width:110, height:110, borderRadius:"50%",
+                  objectFit:"cover",
+                  border:"2px solid rgba(255,255,255,0.14)",
                 }}
               />
-              <div>
-                <div style={{ fontFamily:"'Sora',sans-serif", fontSize:16, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.02em", marginBottom:3 }}>
-                  Abhi Harchandani
-                </div>
-                <div style={{ fontFamily:"'Figtree',sans-serif", fontSize:12, color:"#6e6e73", lineHeight:1.5 }}>
-                  Senior Technical Account Manager<br />
-                  Google Cloud · Chicago
-                </div>
+            </div>
+
+            {/* Name block — centered */}
+            <div style={{ textAlign:"center", marginBottom:22 }}>
+              <div style={{ fontFamily:"'Sora',sans-serif", fontSize:20, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:4 }}>
+                Abhi
+              </div>
+              <div style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#6e6e73" }}>
+                Abhinav Harchandani
               </div>
             </div>
 
-            {/* Bio */}
-            <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:"0 0 20px" }}>
-              I&apos;ve spent the past three years in the room where model selection decisions get made — evaluating Gemini, Claude, and GPT under real enterprise conditions for Global 500 companies. Frontier Pulse came from a simple need: a clean, honest way to compare frontier models with no affiliation bias. Building it publicly, while working at Google, is an intentional choice. The results speak for themselves.
-            </p>
-
-            {/* Credential chips */}
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:22 }}>
-              {[
-                { label:"Google Cloud", color:"#4285f4" },
-                { label:"CMU MISM",     color:"#c41230" },
-                { label:"U.S. AI/ML NIW",  color:"#63d68d" },
-              ].map(chip => (
-                <div key={chip.label} style={{
-                  display:"inline-flex", alignItems:"center", gap:5,
-                  padding:"4px 12px",
-                  background:`${chip.color}12`,
-                  border:`1px solid ${chip.color}35`,
-                  borderRadius:100,
-                }}>
-                  <div style={{ width:5, height:5, borderRadius:"50%", background:chip.color, flexShrink:0 }} />
-                  <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:600, color:chip.color, whiteSpace:"nowrap" }}>
-                    {chip.label}
-                  </span>
-                </div>
-              ))}
+            {/* Bio — two paragraphs */}
+            <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:22 }}>
+              <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:0 }}>
+                I built Frontier Pulse as a research &amp; experimentation project in Q1 2026. The idea came from a simple need: a clean, honest way to compare frontier models with no affiliation bias. The side-by-side comparison is designed to help you see subtle differences in the latest models — in real time, on a topic relevant to you.
+              </p>
+              <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:0 }}>
+                Mumbai-born, based in Chicago for the past decade. I&apos;ve worked with enterprise customers across Public Sector, FSI, Healthcare &amp; Life Sciences, Manufacturing, and Tech. Most recently I&apos;ve been deep in AI infrastructure, and I&apos;m very much an enthusiast. If you&apos;re building with Google AI Studio or Claude Code — let&apos;s chat.
+              </p>
             </div>
 
             {/* LinkedIn CTA */}
@@ -1061,7 +1056,6 @@ export default function Home() {
               }}
               onMouseEnter={e => { e.currentTarget.style.background="rgba(10,102,194,0.25)"; e.currentTarget.style.borderColor="rgba(10,102,194,0.55)"; }}
               onMouseLeave={e => { e.currentTarget.style.background="rgba(10,102,194,0.15)"; e.currentTarget.style.borderColor="rgba(10,102,194,0.35)"; }}>
-              {/* LinkedIn icon */}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
               </svg>
