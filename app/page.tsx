@@ -94,37 +94,48 @@ const NAV_ITEMS: { id: Section; label: string }[] = [
 // After each successful API call the server returns `attemptsLeft` which is
 // used to keep localStorage in sync.
 
-const FREE_LIMIT  = 10;         // must match DAILY_LIMIT in app/lib/rateLimit.ts
-const STORAGE_KEY = "fp_daily"; // { date: "YYYY-MM-DD", count: number }
+const FREE_LIMIT  = 10;           // must match DAILY_LIMIT in app/lib/rateLimit.ts
+const STORAGE_KEY = "fp_session"; // { firstUse: ms timestamp, count: number }
+const WINDOW_MS   = 24 * 60 * 60 * 1000; // 24 h — rolling from first use
 
-interface DailyRecord { date: string; count: number; }
+interface SessionRecord { firstUse: number; count: number; }
 
-function todayUTC(): string {
-  return new Date().toISOString().slice(0, 10); // "2026-04-01"
-}
-
-function getDaily(): DailyRecord {
-  if (typeof window === "undefined") return { date: todayUTC(), count: 0 };
+function getSession(): SessionRecord {
+  if (typeof window === "undefined") return { firstUse: Date.now(), count: 0 };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { date: todayUTC(), count: 0 };
-    const parsed = JSON.parse(raw) as DailyRecord;
-    // Different date = new day, reset counter
-    if (parsed.date !== todayUTC()) return { date: todayUTC(), count: 0 };
+    if (!raw) return { firstUse: Date.now(), count: 0 };
+    const parsed = JSON.parse(raw) as SessionRecord;
+    // Window elapsed — treat as a fresh start
+    if (Date.now() - parsed.firstUse > WINDOW_MS) return { firstUse: Date.now(), count: 0 };
     return parsed;
-  } catch { return { date: todayUTC(), count: 0 }; }
+  } catch { return { firstUse: Date.now(), count: 0 }; }
 }
 
-function getAttempts() { return getDaily().count; }
+function getAttempts() { return getSession().count; }
 
 function setAttemptCount(n: number) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayUTC(), count: n }));
+  const session  = getSession();
+  // Keep existing firstUse if still in the window; otherwise this is the first use
+  const firstUse = session.count > 0 ? session.firstUse : Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ firstUse, count: n }));
 }
 
 function incrementAttempts() {
   const next = getAttempts() + 1;
   setAttemptCount(next);
   return next;
+}
+
+/** Human-readable local time when the current 24h window expires. */
+function getResetTime(): string {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return "24h from first use";
+    const { firstUse } = JSON.parse(raw) as SessionRecord;
+    if (!firstUse) return "24h from first use";
+    return new Date(firstUse + WINDOW_MS).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch { return "24h from first use"; }
 }
 
 // ─── Browser fingerprint ──────────────────────────────────────────────────────
@@ -922,16 +933,19 @@ export default function Home() {
               {FREE_LIMIT} comparisons / day
             </h2>
 
-            {/* 2-sentence explanation */}
+            {/* 2-sentence explanation — option D */}
             <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#8e8e93", lineHeight:1.75, margin:0 }}>
-              Running three frontier AI models simultaneously on every comparison has a real cost per query.
-              Ten daily comparisons keeps Frontier Pulse free and open while we&apos;re in research and experimentation mode — building responsibly before we scale.
+              Every comparison fires three paid AI APIs in parallel — the cost is real and adds up fast.
+              Ten a day is what keeps this free and available without putting it behind a login or a paywall.
             </p>
 
-            {/* Reset note */}
+            {/* Reset note — dynamic, based on rolling window */}
             <div style={{ marginTop:20, padding:"10px 14px", background:"rgba(255,255,255,0.04)", borderRadius:10, border:"1px solid rgba(255,255,255,0.07)" }}>
               <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", color:"#6e6e73" }}>
-                Resets at <strong style={{ color:"#a1a1a6" }}>12:00 AM UTC</strong> · {attempts}/{FREE_LIMIT} used today
+                {attempts > 0
+                  ? <>Resets at <strong style={{ color:"#a1a1a6" }}>{getResetTime()}</strong> · {attempts}/{FREE_LIMIT} used</>
+                  : <>10 comparisons · 24-hour rolling window from first use</>
+                }
               </span>
             </div>
           </div>
