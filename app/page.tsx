@@ -313,7 +313,7 @@ export default function Home() {
   }, [showAboutModal, showHowItWorks, showLimitModal]);
 
   // ─── Rotating hook line ───────────────────────────────────────────────────
-  // Fades out, swaps text, fades back in every 3.5 s.
+  // Fades out, swaps text, fades back in every 5 s.
   useEffect(() => {
     const t = setInterval(() => {
       setHookVisible(false);
@@ -321,7 +321,7 @@ export default function Home() {
         setHookIdx(i => (i + 1) % HOOK_LINES.length);
         setHookVisible(true);
       }, 380);
-    }, 3500);
+    }, 5000);
     return () => clearInterval(t);
   }, []);
 
@@ -684,7 +684,7 @@ export default function Home() {
                   </p>
                   {/* Rotating hook line */}
                   <p style={{
-                    fontSize:"clamp(11px,2.6vw,13px)", color:"#6e6e73",
+                    fontSize:"clamp(11px,2.6vw,13px)", color:"#a1a1a6",
                     fontFamily:"'Figtree',sans-serif", lineHeight:1.5,
                     minHeight:"1.5em", margin:"0 auto",
                     opacity: hookVisible ? 1 : 0,
