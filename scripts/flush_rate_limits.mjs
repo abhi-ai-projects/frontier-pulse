@@ -22,8 +22,17 @@ import { resolve } from "path";
 try {
   const env = readFileSync(resolve(process.cwd(), ".env.local"), "utf8");
   for (const line of env.split("\n")) {
-    const [k, ...rest] = line.split("=");
-    if (k && rest.length) process.env[k.trim()] = rest.join("=").trim();
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx === -1) continue;
+    const k = trimmed.slice(0, idx).trim();
+    // Strip surrounding quotes from value (single or double)
+    let v = trimmed.slice(idx + 1).trim();
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1);
+    }
+    if (k) process.env[k] = v;
   }
 } catch {
   // .env.local not found — rely on environment variables already set
