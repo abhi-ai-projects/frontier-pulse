@@ -316,7 +316,7 @@ export default function Home() {
   }, [showAboutModal, showHowItWorks, showLimitModal]);
 
   // ─── Rotating hook line ───────────────────────────────────────────────────
-  // Fades out, swaps text, fades back in every 5 s.
+  // Fades out, swaps text, fades back in every 4 s.
   useEffect(() => {
     const t = setInterval(() => {
       setHookVisible(false);
@@ -324,7 +324,7 @@ export default function Home() {
         setHookIdx(i => (i + 1) % HOOK_LINES.length);
         setHookVisible(true);
       }, 380);
-    }, 5000);
+    }, 4000);
     return () => clearInterval(t);
   }, []);
 
@@ -677,24 +677,35 @@ export default function Home() {
               ════════════════════════════════════ */}
               <div className={`section-transition ${section === "prompt" ? "section-visible" : "section-hidden"}`}>
 
-                <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 36px", maxWidth:680, margin:"0 auto" }}>
-                  <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(22px,2.8vw,36px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
-                    Same prompt. Three minds.
-                  </h1>
-                  {/* Model names */}
-                  <p style={{ fontSize:"clamp(11px,3.2vw,14px)", color:"#c7c7cc", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em", whiteSpace:"nowrap", marginBottom:14 }}>
-                    Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 3.1 Pro
-                  </p>
-                  {/* Rotating hook line */}
-                  <p style={{
-                    fontSize:"clamp(11px,2.6vw,13px)", color:"#a1a1a6",
-                    fontFamily:"'Figtree',sans-serif", lineHeight:1.5,
-                    minHeight:"1.5em", margin:"0 auto",
-                    opacity: hookVisible ? 1 : 0,
-                    transition:"opacity 0.35s ease",
-                  }}>
-                    {HOOK_LINES[hookIdx]}
-                  </p>
+                <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"56px 24px 40px", maxWidth:680, margin:"0 auto", position:"relative" }}>
+                  {/* Subtle radial glow — brand colours bleeding very softly behind headline */}
+                  <div style={{
+                    position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
+                    width:"100%", height:"100%", pointerEvents:"none",
+                    background:"radial-gradient(ellipse 70% 50% at 50% 35%, rgba(255,159,107,0.07) 0%, rgba(99,214,141,0.05) 45%, transparent 70%)",
+                    zIndex:0,
+                  }} />
+                  <div style={{ position:"relative", zIndex:1 }}>
+                    <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(26px,3.2vw,42px)", fontWeight:700, letterSpacing:"-0.04em", lineHeight:1.08, color:"#f5f5f7", marginBottom:14 }}>
+                      Same prompt. Three minds.
+                    </h1>
+                    {/* Model names with brand-colour dots — dimmer to let h1 + hook breathe */}
+                    <p style={{ fontSize:"clamp(10px,2.8vw,12px)", color:"#6e6e73", fontFamily:"'Sora',sans-serif", letterSpacing:"0.06em", whiteSpace:"nowrap", marginBottom:18, textTransform:"uppercase" }}>
+                      <span style={{ color:"#ff9f6b" }}>●</span>&nbsp;Claude Sonnet 4.6
+                      &nbsp;&nbsp;<span style={{ color:"#63d68d" }}>●</span>&nbsp;GPT-5.4
+                      &nbsp;&nbsp;<span style={{ color:"#6ab4f5" }}>●</span>&nbsp;Gemini 3.1 Pro
+                    </p>
+                    {/* Rotating hook line — bright, action-oriented */}
+                    <p style={{
+                      fontSize:"clamp(13px,2.8vw,15px)", color:"#d0d0d8",
+                      fontFamily:"'Figtree',sans-serif", lineHeight:1.5, fontWeight:400,
+                      minHeight:"1.6em", margin:"0 auto",
+                      opacity: hookVisible ? 1 : 0,
+                      transition:"opacity 0.35s ease",
+                    }}>
+                      {HOOK_LINES[hookIdx]}
+                    </p>
+                  </div>
                 </section>
 
                 {/* Task chips — size controlled by globals.css .task-chip */}
