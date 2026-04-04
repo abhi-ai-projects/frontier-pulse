@@ -246,8 +246,6 @@ export default function Home() {
   const [showAboutModal,  setShowAboutModal]  = useState(false);
   // Track per-card scroll-to-bottom to hide fade gradient when fully scrolled
   const [atBottom,      setAtBottom]      = useState<Record<string, boolean>>({});
-  const [linkCopied,    setLinkCopied]    = useState(false);
-  const [imgSaving,     setImgSaving]     = useState(false);
 
   const hasRes    = Object.keys(responses).length > 0;
   const submitted = hasRes || loading; // prompt is locked after Compare is hit
@@ -329,181 +327,6 @@ export default function Home() {
     }, 4000);
     return () => clearInterval(t);
   }, []);
-
-  // ─── URL prompt pre-fill (Option B) ─────────────────────────────────────────
-  // If the page is opened with ?p=<base64prompt>, decode and pre-fill the textarea.
-  useEffect(() => {
-    try {
-      const p = new URLSearchParams(window.location.search).get("p");
-      if (p) setPrompt(decodeURIComponent(escape(atob(p))).slice(0, 1000));
-    } catch { /* malformed param — ignore */ }
-  }, []);
-
-  // Copy a shareable URL that pre-fills this prompt for the recipient.
-  const sharePromptLink = () => {
-    try {
-      const encoded = btoa(unescape(encodeURIComponent(prompt)));
-      const url = `${window.location.origin}${window.location.pathname}?p=${encoded}`;
-      navigator.clipboard.writeText(url).then(() => {
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2200);
-      });
-    } catch { /* clipboard unavailable */ }
-  };
-
-  // ─── Canvas share image (Option C) ───────────────────────────────────────────
-  // Draws a 1200×630 branded summary card and triggers a PNG download.
-  const saveAsImage = async () => {
-    if (!insights || imgSaving) return;
-    setImgSaving(true);
-    try {
-      await document.fonts.ready; // ensure Sora is loaded before drawing
-      const W = 1200, H = 630;
-      const canvas = document.createElement("canvas");
-      canvas.width = W; canvas.height = H;
-      const ctx = canvas.getContext("2d")!;
-
-      // ── Background ──────────────────────────────────────────────────────────
-      ctx.fillStyle = "#0a0a0a";
-      ctx.fillRect(0, 0, W, H);
-
-      // Subtle brand glow top-centre
-      const glow = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, 500);
-      glow.addColorStop(0,   "rgba(255,159,107,0.09)");
-      glow.addColorStop(0.5, "rgba(99,214,141,0.06)");
-      glow.addColorStop(1,   "transparent");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, W, 500);
-
-      // ── Header ───────────────────────────────────────────────────────────────
-      const dots = [{ x:30, c:"#ff9f6b" }, { x:50, c:"#63d68d" }, { x:70, c:"#6ab4f5" }];
-      dots.forEach(d => {
-        ctx.beginPath();
-        ctx.arc(d.x, 42, 8, 0, Math.PI * 2);
-        ctx.fillStyle = d.c;
-        ctx.fill();
-      });
-      ctx.font = "700 22px 'Sora', sans-serif";
-      ctx.fillStyle = "#f5f5f7";
-      ctx.fillText("Frontier Pulse", 90, 49);
-
-      ctx.font = "400 13px 'Sora', sans-serif";
-      ctx.fillStyle = "#6e6e73";
-      ctx.textAlign = "right";
-      ctx.fillText("frontierpulse.org", W - 32, 49);
-      ctx.textAlign = "left";
-
-      // ── Divider ──────────────────────────────────────────────────────────────
-      ctx.strokeStyle = "rgba(255,255,255,0.08)";
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(30, 68); ctx.lineTo(W - 30, 68); ctx.stroke();
-
-      // ── Prompt ───────────────────────────────────────────────────────────────
-      const truncPrompt = prompt.length > 100 ? prompt.slice(0, 100) + "…" : prompt;
-      ctx.font = "400 18px 'Figtree', sans-serif";
-      ctx.fillStyle = "#c7c7cc";
-      ctx.fillText(`"${truncPrompt}"`, 32, 108);
-
-      // ── Model columns ─────────────────────────────────────────────────────────
-      const colW = (W - 64 - 32) / 3;
-      MODELS.forEach((m, i) => {
-        const x = 32 + i * (colW + 16);
-        const y = 148;
-
-        // Card background
-        ctx.fillStyle = `${m.dot}12`;
-        ctx.beginPath();
-        (ctx as unknown as { roundRect: (x:number,y:number,w:number,h:number,r:number)=>void })
-          .roundRect(x, y, colW, 390, 12);
-        ctx.fill();
-
-        // Top accent bar
-        ctx.fillStyle = m.dot;
-        ctx.beginPath();
-        (ctx as unknown as { roundRect: (x:number,y:number,w:number,h:number,r:number[])=>void })
-          .roundRect(x, y, colW, 4, [12, 12, 0, 0]);
-        ctx.fill();
-
-        // Model dot + name
-        ctx.beginPath();
-        ctx.arc(x + 22, y + 34, 5, 0, Math.PI * 2);
-        ctx.fillStyle = m.dot;
-        ctx.fill();
-        ctx.font = "700 15px 'Sora', sans-serif";
-        ctx.fillStyle = "#f5f5f7";
-        ctx.fillText(m.label, x + 34, y + 39);
-
-        // Scores
-        const scores = [
-          { label: "Relevance",    val: getScore(m.key, "Relevance") },
-          { label: "Faithfulness", val: getScore(m.key, "Faithfulness") },
-          { label: "Safety",       val: getScore(m.key, "Safety") },
-        ];
-        scores.forEach((s, si) => {
-          const sy = y + 90 + si * 80;
-          // Score number
-          const col = s.val >= 80 ? "#63d68d" : s.val >= 60 ? "#f5a623" : "#ff6b6b";
-          ctx.font = "700 36px 'Sora', sans-serif";
-          ctx.fillStyle = col;
-          ctx.fillText(String(s.val || "—"), x + 20, sy + 38);
-          // Label
-          ctx.font = "500 12px 'Sora', sans-serif";
-          ctx.fillStyle = "#8e8e93";
-          ctx.fillText(s.label.toUpperCase(), x + 20, sy + 56);
-          // Score bar
-          const barW = colW - 40;
-          ctx.fillStyle = "rgba(255,255,255,0.08)";
-          ctx.beginPath();
-          (ctx as unknown as { roundRect: (x:number,y:number,w:number,h:number,r:number)=>void })
-            .roundRect(x + 20, sy + 64, barW, 3, 2);
-          ctx.fill();
-          ctx.fillStyle = col;
-          ctx.beginPath();
-          (ctx as unknown as { roundRect: (x:number,y:number,w:number,h:number,r:number)=>void })
-            .roundRect(x + 20, sy + 64, barW * (s.val / 100), 3, 2);
-          ctx.fill();
-        });
-
-        // Insight text (truncated)
-        const insight = getInsight(m.key);
-        if (insight) {
-          ctx.font = "400 11px 'Figtree', sans-serif";
-          ctx.fillStyle = "#8e8e93";
-          const words = insight.split(" ");
-          let line = "", ly = y + 340;
-          for (const w of words) {
-            const test = line + w + " ";
-            if (ctx.measureText(test).width > colW - 32 && line) {
-              ctx.fillText(line.trim(), x + 16, ly);
-              line = w + " "; ly += 16;
-              if (ly > y + 376) { ctx.fillText("…", x + 16, ly); break; }
-            } else { line = test; }
-          }
-          if (line && ly <= y + 376) ctx.fillText(line.trim(), x + 16, ly);
-        }
-      });
-
-      // ── Footer ───────────────────────────────────────────────────────────────
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
-      ctx.beginPath(); ctx.moveTo(30, H - 42); ctx.lineTo(W - 30, H - 42); ctx.stroke();
-      ctx.font = "400 12px 'Sora', sans-serif";
-      ctx.fillStyle = "#6e6e73";
-      ctx.fillText("Same prompt. Three minds. Compare frontier AI at frontierpulse.org", 32, H - 18);
-
-      // ── Download ─────────────────────────────────────────────────────────────
-      canvas.toBlob(blob => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "frontier-pulse-comparison.png";
-        a.click();
-        URL.revokeObjectURL(url);
-      }, "image/png");
-    } finally {
-      setImgSaving(false);
-    }
-  };
 
   // ─── Core comparison handler ────────────────────────────────────────────────
   // Fires after the user clicks Compare. Runs client-side gate first (fast),
@@ -593,9 +416,9 @@ export default function Home() {
     </button>
   );
 
-  // Small square icon button — symbol only, title tooltip for accessibility
-  const iconBtn = (symbol: string, title: string, onClick: () => void) => (
-    <button onClick={onClick} title={title}
+  // Small square icon button — symbol only, custom CSS tooltip (instant, no OS delay)
+  const iconBtn = (symbol: string, tip: string, onClick: () => void) => (
+    <button onClick={onClick} className="icon-btn" data-tip={tip}
       style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, color:"#8e8e93", background:"none", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, cursor:"pointer", transition:"all 0.1s ease", flexShrink:0, lineHeight:1 }}
       onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.24)"; }}
       onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
@@ -906,34 +729,24 @@ export default function Home() {
                   </p>
                 )}
 
-                {/* Active comparison bar — replaces the lone "+" icon, gives clear visual break */}
+                {/* Subtle action row — shown once a comparison is in flight or complete */}
                 {submitted && !loading && (
-                  <div style={{
-                    display:"flex", justifyContent:"space-between", alignItems:"center",
-                    marginBottom:12, padding:"10px 16px",
-                    background:"rgba(255,255,255,0.04)",
-                    border:"1px solid rgba(255,255,255,0.08)",
-                    borderRadius:12,
-                  }}>
-                    <span style={{ fontSize:12, color:"#8e8e93", fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em" }}>
-                      Prompt locked · results ready
-                    </span>
-                    <div style={{ display:"flex", gap:8 }}>
-                      <button
-                        onClick={() => goToSection("compare")}
-                        style={{ fontSize:12, color:"#8e8e93", background:"none", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.1s ease", whiteSpace:"nowrap" }}
-                        onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.24)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
-                        View results →
-                      </button>
-                      <button
-                        onClick={newPrompt}
-                        style={{ fontSize:12, color:"#f5f5f7", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"'Sora',sans-serif", fontWeight:600, transition:"all 0.1s ease", whiteSpace:"nowrap" }}
-                        onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.13)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.26)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.08)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.14)"; }}>
-                        + New prompt
-                      </button>
-                    </div>
+                  <div style={{ display:"flex", justifyContent:"flex-end", gap:8, marginBottom:12 }}>
+                    <button
+                      onClick={() => goToSection("compare")}
+                      style={{ fontSize:12, color:"#6e6e73", background:"none", border:"none", borderRadius:8, padding:"4px 2px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"color 0.1s ease", whiteSpace:"nowrap" }}
+                      onMouseEnter={e => { e.currentTarget.style.color="#a1a1a6"; }}
+                      onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; }}>
+                      View results →
+                    </button>
+                    <span style={{ color:"rgba(255,255,255,0.12)", fontSize:12, lineHeight:"24px" }}>·</span>
+                    <button
+                      onClick={newPrompt}
+                      style={{ fontSize:12, color:"#6e6e73", background:"none", border:"none", borderRadius:8, padding:"4px 2px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"color 0.1s ease", whiteSpace:"nowrap" }}
+                      onMouseEnter={e => { e.currentTarget.style.color="#a1a1a6"; }}
+                      onMouseLeave={e => { e.currentTarget.style.color="#6e6e73"; }}>
+                      + New prompt
+                    </button>
                   </div>
                 )}
                 {/* During loading: small icon only — can't start new mid-flight */}
@@ -1102,39 +915,9 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Share row + CTA to analysis */}
+                {/* CTA to analysis */}
                 {hasRes && !loading && (
-                  <div style={{ marginTop:44, display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
-
-                    {/* Share actions */}
-                    <div style={{ display:"flex", gap:10 }}>
-                      {/* Option B — share prompt link */}
-                      <button
-                        onClick={sharePromptLink}
-                        style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, color: linkCopied ? "#63d68d" : "#a1a1a6", background:"rgba(255,255,255,0.05)", border:`1px solid ${linkCopied ? "rgba(99,214,141,0.4)" : "rgba(255,255,255,0.1)"}`, borderRadius:10, padding:"8px 16px", cursor:"pointer", fontFamily:"'Sora',sans-serif", fontWeight:500, transition:"all 0.1s ease", whiteSpace:"nowrap" }}
-                        onMouseEnter={e => { if (!linkCopied) { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}}
-                        onMouseLeave={e => { if (!linkCopied) { e.currentTarget.style.color="#a1a1a6"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}}>
-                        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-                          <path d="M13 3h4v4M17 3l-7 7M9 5H5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        {linkCopied ? "Link copied!" : "Share prompt"}
-                      </button>
-
-                      {/* Option C — save as image */}
-                      <button
-                        onClick={saveAsImage}
-                        disabled={imgSaving}
-                        style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, color:"#a1a1a6", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"8px 16px", cursor: imgSaving ? "default" : "pointer", fontFamily:"'Sora',sans-serif", fontWeight:500, transition:"all 0.1s ease", whiteSpace:"nowrap", opacity: imgSaving ? 0.5 : 1 }}
-                        onMouseEnter={e => { if (!imgSaving) { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}}
-                        onMouseLeave={e => { if (!imgSaving) { e.currentTarget.style.color="#a1a1a6"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}}>
-                        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-                          <path d="M10 3v10M6 9l4 4 4-4M4 15h12a1 1 0 011 1v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-1a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        {imgSaving ? "Saving…" : "Save as image"}
-                      </button>
-                    </div>
-
-                    {/* View analysis CTA */}
+                  <div style={{ marginTop:44, display:"flex", flexDirection:"column", alignItems:"center" }}>
                     <button onClick={() => goToSection("analysis")}
                       style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:980, padding:"11px 32px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Sora',sans-serif", color:"#f5f5f7", letterSpacing:"0.01em", transition:"all 0.1s ease" }}
                       onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}
