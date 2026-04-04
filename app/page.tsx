@@ -704,8 +704,38 @@ export default function Home() {
                   ))}
                 </div>
 
-                {/* New Prompt button — appears above input once a compare has been run */}
-                {submitted && (
+                {/* Active comparison bar — replaces the lone "+" icon, gives clear visual break */}
+                {submitted && !loading && (
+                  <div style={{
+                    display:"flex", justifyContent:"space-between", alignItems:"center",
+                    marginBottom:12, padding:"10px 16px",
+                    background:"rgba(255,255,255,0.04)",
+                    border:"1px solid rgba(255,255,255,0.08)",
+                    borderRadius:12,
+                  }}>
+                    <span style={{ fontSize:12, color:"#8e8e93", fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em" }}>
+                      Prompt locked · results ready
+                    </span>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button
+                        onClick={() => goToSection("compare")}
+                        style={{ fontSize:12, color:"#8e8e93", background:"none", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"'Sora',sans-serif", transition:"all 0.2s ease", whiteSpace:"nowrap" }}
+                        onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.24)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color="#8e8e93"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+                        View results →
+                      </button>
+                      <button
+                        onClick={newPrompt}
+                        style={{ fontSize:12, color:"#f5f5f7", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"'Sora',sans-serif", fontWeight:600, transition:"all 0.2s ease", whiteSpace:"nowrap" }}
+                        onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.13)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.26)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.08)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.14)"; }}>
+                        + New prompt
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {/* During loading: small icon only — can't start new mid-flight */}
+                {submitted && loading && (
                   <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
                     {iconBtn("+", "New Prompt", newPrompt)}
                   </div>
@@ -739,7 +769,7 @@ export default function Home() {
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 16px 16px 22px" }}>
                     {/* Desktop: keyboard shortcut hint */}
                     <span className="keyboard-hint" style={{ fontSize:11, color:"#8e8e93", fontFamily:"'Sora',sans-serif" }}>
-                      {submitted ? "Running comparison…" : "⌘ Return to compare"}
+                      {loading ? "Running comparison…" : submitted ? "Results ready below" : "⌘ Return to compare"}
                     </span>
                     {/* Mobile: attempt counter lives here — taps to open limit modal */}
                     {!submitted && attempts > 0 && !gated && (
