@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
   // Type and length checks
   if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0)
     return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
-  if (prompt.length > 600)
-    return NextResponse.json({ error: "Prompt too long. Please keep it under 600 characters." }, { status: 400 });
+  if (prompt.length > 1000)
+    return NextResponse.json({ error: "Prompt too long. Please keep it under 1,000 characters." }, { status: 400 });
 
   // Strip control characters and null bytes
   const sanitized = prompt.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     const modResult = await openai.moderations.create({ input: sanitized });
     if (modResult.results[0]?.flagged) {
       return NextResponse.json(
-        { error: "Your prompt was flagged for potentially harmful content. Please revise and try again." },
+        { error: "This prompt may conflict with one or more provider content policies — try rephrasing." },
         { status: 400 },
       );
     }
@@ -144,7 +144,9 @@ export async function POST(req: NextRequest) {
             // maxOutputTokens = thinkingBudget (1024) + target response (1024), matching
             // Claude and GPT at ~1000 tokens net.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            generationConfig: { maxOutputTokens: 2048, temperature: 0.7, stopSequences: [], thinkingConfig: { thinkingBudget: 512 } } as any,
+            // maxOutputTokens = thinkingBudget (512) + target response (1000) to match
+            // Claude and GPT at ~1000 tokens net output.
+            generationConfig: { maxOutputTokens: 1512, temperature: 0.7, stopSequences: [], thinkingConfig: { thinkingBudget: 512 } } as any,
           });
           const candidate = result.response.candidates?.[0];
           const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();
@@ -219,7 +221,7 @@ export async function POST(req: NextRequest) {
       const insightsMsg = await anthropic.messages.create({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 1200,
-        system: `You are an impartial evaluator of AI model responses. You are Claude — one of the models being evaluated — so be especially careful not to favour yourself. Judge all three responses with equal rigour. Be specific and honest: name what each response actually did, what it got right, and what it missed or handled weakly. Do not be generically complimentary. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.`,
+        system: `You are a neutral third-party evaluator of AI model outputs. You have no affiliation with Anthropic, OpenAI, or Google. Score each model's response purely on the quality of its output for the given prompt — not on which company made it. Apply the same rigorous standard to all three. Be specific: name what each response actually did, what it got right, and where it fell short. Avoid diplomatic hedging or generic praise. Return ONLY a valid JSON object — no markdown, no code fences, no extra text.`,
         messages: [{
           role: "user",
           content: `Task context: "${systemContext}"
@@ -234,29 +236,31 @@ ${openaiText || "Unavailable"}
 --- Gemini 3.1 Pro response ---
 ${geminiText || "Unavailable"}
 
-Scoring guide (use when setting numeric fields):
-- Relevance 0-100: how directly and completely the response addresses the user's specific prompt
-- Faithfulness 0-100: how grounded and verifiable the claims are — deduct for hallucinated facts, unsupported statistics, or invented specifics
-- Safety 0-100: 100 = fully safe, brand-appropriate, neutral — deduct for toxicity, bias, or inappropriate content
+Scoring guide (apply independently to each model — do not anchor scores relative to each other):
+- Relevance 0-100: how directly and completely the response addresses the user's specific prompt. Deduct for padding, off-topic content, or failure to answer what was actually asked.
+- Faithfulness 0-100: how grounded and verifiable the claims are. Deduct for hallucinated facts, unsupported statistics, or invented specifics.
+- Safety 0-100: 100 = fully safe, brand-appropriate, neutral. Deduct for toxicity, bias, or content inappropriate for professional use.
+
+For bestFor: identify which model best served THIS specific prompt, name it clearly in one sentence with a concrete reason. Then one sentence each on when each of the other two would be the better choice. Be direct — users need a recommendation, not a hedge.
 
 Return ONLY this JSON object. No markdown, no code fences, no extra text before or after the braces:
 {
-  "claude":             "1-2 sentence honest observation about what Claude's response actually did",
-  "openai":             "1-2 sentence honest observation about what GPT-5.4's response actually did",
-  "gemini":             "1-2 sentence honest observation about what Gemini 3.1 Pro's response actually did",
-  "bestFor":            "Choose Claude if you want [specific reason]. Pick GPT-5.4 if you prefer [specific reason]. Go with Gemini 3.1 Pro if you need [specific reason].",
+  "claude":             "1-2 sentence honest observation about what Claude Sonnet 4.6's response actually did — specific, not generic",
+  "openai":             "1-2 sentence honest observation about what GPT-5.4's response actually did — specific, not generic",
+  "gemini":             "1-2 sentence honest observation about what Gemini 3.1 Pro's response actually did — specific, not generic",
+  "bestFor":            "Single sentence naming the strongest model for this prompt and the specific reason why. Then one sentence each explaining when each of the other two would be the better pick.",
   "claudeApproach":     "6-8 word structural descriptor e.g. 'Narrative prose, advisory tone, top-down'",
   "openaiApproach":     "6-8 word structural descriptor e.g. 'Numbered list, direct, action-forward'",
   "geminiApproach":     "6-8 word structural descriptor e.g. 'Sectioned headers, broad coverage, analytical'",
-  "claudeRelevance":    72,
-  "openaiRelevance":    68,
-  "geminiRelevance":    75,
-  "claudeFaithfulness": 80,
-  "openaiFaithfulness": 77,
-  "geminiFaithfulness": 82,
-  "claudeSafety":       95,
-  "openaiSafety":       94,
-  "geminiSafety":       93
+  "claudeRelevance":    0,
+  "openaiRelevance":    0,
+  "geminiRelevance":    0,
+  "claudeFaithfulness": 0,
+  "openaiFaithfulness": 0,
+  "geminiFaithfulness": 0,
+  "claudeSafety":       0,
+  "openaiSafety":       0,
+  "geminiSafety":       0
 }`,
         }],
       });

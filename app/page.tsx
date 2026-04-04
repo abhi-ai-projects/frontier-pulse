@@ -23,21 +23,28 @@ const TASK_CATEGORIES = [
   {
     id: "write",
     label: "Write",
-    placeholder: "What do you need to communicate, and to whom? E.g. 'Reply to an enterprise client whose AI project is 3 weeks delayed — they have an exec review next Friday' or 'Pitch moving our team to Claude API to our CTO' or 'Announce a reorg to my team of 12'",
+    placeholder: "What do you need to write, and for whom? E.g. 'Reply to a client whose project is 3 weeks delayed' or 'Pitch moving our team to the Claude API'",
     systemContext: "You are a professional communication expert. Help the user craft whatever they need to communicate — this could be an email, message, announcement, pitch, memo, or any other format. Follow the user's lead on format and context.",
   },
   {
     id: "analyze",
     label: "Analyze",
-    placeholder: "What situation, market, or decision do you want to understand better? E.g. 'Compare Anthropic vs OpenAI for enterprise API customers' or 'Assess risks of adopting a third-party LLM API in a HIPAA environment' or 'Summarize this pilot result for our CTO'",
+    placeholder: "What do you want to understand or break down? E.g. 'Compare Anthropic vs OpenAI for enterprise' or 'Assess HIPAA risks of adopting a third-party LLM API'",
     systemContext: "You are a senior strategy and analysis expert. Analyze whatever situation, market, document, or decision the user presents. Structure your thinking clearly and surface the insights that actually matter. Follow the user's lead on scope and depth.",
   },
   {
     id: "decide",
     label: "Decide",
-    placeholder: "What are you weighing up? E.g. 'Should we standardize on one AI model or run Claude and GPT in parallel?' or 'I have two job offers — help me think through the tradeoffs' or 'Should we delay our product launch by 6 weeks?'",
+    placeholder: "What are you weighing up? E.g. 'Should we standardize on one AI model?' or 'Two job offers — help me think through the tradeoffs'",
     systemContext: "You are a trusted advisor helping someone think through a decision. Lay out the real tradeoffs, surface what they might be missing, and help them reach a confident conclusion. Follow the user's lead on the decision they're facing — personal or professional.",
   },
+];
+
+// ─── Rotating hook lines (hero subtitle) ─────────────────────────────────────
+const HOOK_LINES = [
+  "Enter any prompt — see three frontier models respond in real time.",
+  "Write a message  ·  Analyze a situation  ·  Decide between options",
+  "Explore timing, scores, and an honest verdict in the Analyze tab.",
 ];
 
 // ─── "How it works" step definitions ─────────────────────────────────────────
@@ -45,7 +52,7 @@ const TASK_CATEGORIES = [
 const HOW_IT_WORKS_STEPS = [
   {
     title: "You enter a prompt",
-    desc: "Choose Write, Analyze, or Decide. Type what you need — up to 600 characters. The same prompt goes to every model so you're comparing apples to apples.",
+    desc: "Choose Write, Analyze, or Decide. Type what you need — up to 1,000 characters. The same prompt goes to every model so you're comparing apples to apples.",
     color: "#f5f5f7",
   },
   {
@@ -220,6 +227,8 @@ export default function Home() {
   const [section,   setSection]   = useState<Section>("prompt");
   const [task,      setTask]      = useState(TASK_CATEGORIES[0]);
   const [prompt,    setPrompt]    = useState("");
+  const [hookIdx,     setHookIdx]     = useState(0);
+  const [hookVisible, setHookVisible] = useState(true);
   const [responses, setResponses] = useState<Record<string,string>>({});
   const [insights,  setInsights]  = useState<Insights | null>(null);
   const [timing,    setTiming]    = useState<Record<string,number>>({});
@@ -302,6 +311,19 @@ export default function Home() {
       document.body.style.width = "";
     };
   }, [showAboutModal, showHowItWorks, showLimitModal]);
+
+  // ─── Rotating hook line ───────────────────────────────────────────────────
+  // Fades out, swaps text, fades back in every 3.5 s.
+  useEffect(() => {
+    const t = setInterval(() => {
+      setHookVisible(false);
+      setTimeout(() => {
+        setHookIdx(i => (i + 1) % HOOK_LINES.length);
+        setHookVisible(true);
+      }, 380);
+    }, 3500);
+    return () => clearInterval(t);
+  }, []);
 
   // ─── Core comparison handler ────────────────────────────────────────────────
   // Fires after the user clicks Compare. Runs client-side gate first (fast),
@@ -402,9 +424,9 @@ export default function Home() {
   );
 
   // ─── Score helpers ────────────────────────────────────────────────────────
-  const scoreColor = (s: number) => s >= 80 ? "#63d68d" : s >= 55 ? "#f5a623" : "#ff6b6b";
-  const scoreLabel = (s: number) => s >= 80 ? "High" : s >= 55 ? "Medium" : "Low";
-  const safetyLabel = (s: number) => s >= 80 ? "Safe" : s >= 55 ? "Low Risk" : "Flagged";
+  const scoreColor = (s: number) => s >= 80 ? "#63d68d" : s >= 60 ? "#f5a623" : "#ff6b6b";
+  const scoreLabel = (s: number) => s >= 90 ? "Excellent" : s >= 80 ? "High" : s >= 60 ? "Good" : "Low";
+  const safetyLabel = (s: number) => s >= 80 ? "Safe" : s >= 60 ? "Low Risk" : "Flagged";
   const getScore = (model: string, metric: string): number =>
     (insights as unknown as Record<string, number>)?.[`${model}${metric}`] ?? 0;
 
@@ -540,7 +562,7 @@ export default function Home() {
                   transition:"width 0.4s ease, background 0.4s ease",
                 }} />
               </div>
-              <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:600, color:"#c7c7cc", letterSpacing:"0.01em" }}>
+              <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:600, color: attempts >= 8 ? "#f5a623" : "#c7c7cc", letterSpacing:"0.01em", transition:"color 0.4s ease" }}>
                 {attempts === 0 ? "10 free" : `${attempts}/${FREE_LIMIT}`}
               </span>
             </button>
@@ -652,13 +674,23 @@ export default function Home() {
               ════════════════════════════════════ */}
               <div className={`section-transition ${section === "prompt" ? "section-visible" : "section-hidden"}`}>
 
-                <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 40px", maxWidth:680, margin:"0 auto" }}>
+                <section className="anim-hero anim-delay-1" style={{ textAlign:"center", padding:"52px 24px 36px", maxWidth:680, margin:"0 auto" }}>
                   <h1 style={{ fontFamily:"'Sora',sans-serif", fontSize:"clamp(22px,2.8vw,36px)", fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:"#f5f5f7", marginBottom:10 }}>
                     Same prompt. Three minds.
                   </h1>
-                  {/* Model names — brighter */}
-                  <p style={{ fontSize:"clamp(11px,3.2vw,14px)", color:"#c7c7cc", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em", whiteSpace:"nowrap" }}>
+                  {/* Model names */}
+                  <p style={{ fontSize:"clamp(11px,3.2vw,14px)", color:"#c7c7cc", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em", whiteSpace:"nowrap", marginBottom:14 }}>
                     Claude Sonnet 4.6 &nbsp;·&nbsp; GPT-5.4 &nbsp;·&nbsp; Gemini 3.1 Pro
+                  </p>
+                  {/* Rotating hook line */}
+                  <p style={{
+                    fontSize:"clamp(11px,2.6vw,13px)", color:"#6e6e73",
+                    fontFamily:"'Figtree',sans-serif", lineHeight:1.5,
+                    minHeight:"1.5em", margin:"0 auto",
+                    opacity: hookVisible ? 1 : 0,
+                    transition:"opacity 0.35s ease",
+                  }}>
+                    {HOOK_LINES[hookIdx]}
                   </p>
                 </section>
 
@@ -689,7 +721,7 @@ export default function Home() {
                   <textarea
                     value={prompt}
                     readOnly={submitted}
-                    onChange={e => !submitted && setPrompt(e.target.value.slice(0, 600))}
+                    onChange={e => !submitted && setPrompt(e.target.value.slice(0, 1000))}
                     placeholder={task.placeholder}
                     rows={5}
                     className="prompt-textarea"
@@ -714,7 +746,7 @@ export default function Home() {
                       <button
                         className="input-counter-mobile"
                         onClick={() => setShowLimitModal(true)}
-                        style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:500, color:"#8e8e93", background:"none", border:"none", cursor:"pointer", padding:0 }}>
+                        style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:500, color: attempts >= 8 ? "#f5a623" : "#8e8e93", background:"none", border:"none", cursor:"pointer", padding:0, transition:"color 0.4s ease" }}>
                         Attempt {attempts}/{FREE_LIMIT}
                       </button>
                     )}
@@ -723,10 +755,10 @@ export default function Home() {
                       {!submitted && (
                         <span style={{
                           fontSize:11, fontFamily:"'Sora',sans-serif",
-                          color: prompt.length >= 580 ? "#ff6b6b" : prompt.length >= 450 ? "#f5a623" : "#8e8e93",
+                          color: prompt.length >= 950 ? "#ff6b6b" : prompt.length >= 750 ? "#f5a623" : "#8e8e93",
                           transition:"color 0.2s",
                         }}>
-                          {prompt.length} / 600
+                          {prompt.length} / 1,000
                         </span>
                       )}
                       {!submitted && (
@@ -758,6 +790,20 @@ export default function Home() {
                     {iconBtn("+", "New Prompt", newPrompt)}
                   </div>
                 </div>
+
+                {/* Loading status banner */}
+                {loading && (
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20, padding:"12px 18px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:12 }}>
+                    <div style={{ display:"flex", gap:5 }}>
+                      {[0,1,2].map(j => (
+                        <div key={j} style={{ width:6, height:6, borderRadius:"50%", background:"#f5f5f7", opacity:0.5, animation:"dotBlink 1.2s ease infinite", animationDelay:`${j * 0.2}s` }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize:12, color:"#8e8e93", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em" }}>
+                      Querying 3 models in parallel — this takes 8–15 seconds
+                    </span>
+                  </div>
+                )}
 
                 {/* Response cards */}
                 {(loading || hasRes) && (
@@ -948,7 +994,7 @@ export default function Home() {
                       <div style={{ padding:"20px 24px 24px", background:"rgba(255,255,255,0.01)" }}>
                         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:"18px 36px" }}>
                           {[
-                            { name:"Response Time",  def:"How long the model took to generate its full answer from the moment you hit Compare." },
+                            { name:"Response Time",  def:"How long the model took to return its full answer from the moment you hit Compare. Reflects network and infrastructure latency — not output quality or reasoning depth." },
                             { name:"Output Tokens",  def:"The number of text chunks in the response. Roughly 1 token ≈ ¾ of a word." },
                             { name:"Est. Read",      def:"Estimated time to read the response at an average pace of 200 words per minute." },
                             { name:"Input Tokens",   def:"The size of everything sent to the model — your prompt plus the task instructions." },
