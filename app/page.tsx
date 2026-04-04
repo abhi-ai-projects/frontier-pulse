@@ -663,14 +663,14 @@ export default function Home() {
               <p style={{ color:"#8e8e93", fontSize:14, lineHeight:1.7, marginBottom:0 }}>
                 Thanks for exploring Frontier Pulse. You&apos;ve used all {FREE_LIMIT} comparisons for today.
                 <br />
-                Your limit resets at <strong style={{ color:"#c7c7cc" }}>12:00 AM UTC</strong> — see you then.
+                Your limit resets {getResetTime().startsWith("Today") || getResetTime().startsWith("Tomorrow") ? "at" : "on"} <strong style={{ color:"#c7c7cc" }}>{getResetTime()}</strong> — see you then.
               </p>
             </div>
           )}
 
           {/* ── Sections container ── */}
           {!gated && (
-            <div style={{ position:"relative" }}>
+            <div style={{ position:"relative", overflow:"hidden" }}>
 
               {/* ════════════════════════════════════
                   SECTION 1 — PROMPT
