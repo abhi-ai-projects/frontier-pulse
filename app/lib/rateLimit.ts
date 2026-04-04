@@ -22,7 +22,7 @@
  *   Set BATCH_SECRET in your Vercel environment (never commit it).
  */
 
-export const DAILY_LIMIT = 600; // TEMP: bumped for overnight batch test — revert to 10 after run
+export const DAILY_LIMIT = 10;
 const WINDOW_MS           = 24 * 60 * 60 * 1000; // 24 h in ms
 const TTL_SECONDS         = 90_000;               // 25 h — lets keys expire naturally after window
 
