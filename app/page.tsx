@@ -23,18 +23,21 @@ const TASK_CATEGORIES = [
   {
     id: "write",
     label: "Write",
+    hint: "Models are tuned as a communication expert — adapts to any format you need",
     placeholder: "What do you need to write, and for whom? E.g. 'Reply to a client whose project is 3 weeks delayed' or 'Pitch moving our team to the Claude API'",
     systemContext: "You are a professional communication expert. Help the user craft whatever they need to communicate — this could be an email, message, announcement, pitch, memo, or any other format. Follow the user's lead on format and context.",
   },
   {
     id: "analyze",
     label: "Analyze",
+    hint: "Models are tuned as a strategy analyst — structured thinking, actionable insights",
     placeholder: "What do you want to understand or break down? E.g. 'Compare Anthropic vs OpenAI for enterprise' or 'Assess HIPAA risks of adopting a third-party LLM API'",
     systemContext: "You are a senior strategy and analysis expert. Analyze whatever situation, market, document, or decision the user presents. Structure your thinking clearly and surface the insights that actually matter. Follow the user's lead on scope and depth.",
   },
   {
     id: "decide",
     label: "Decide",
+    hint: "Models are tuned as a trusted advisor — lays out tradeoffs, helps you land a conclusion",
     placeholder: "What are you weighing up? E.g. 'Should we standardize on one AI model?' or 'Two job offers — help me think through the tradeoffs'",
     systemContext: "You are a trusted advisor helping someone think through a decision. Lay out the real tradeoffs, surface what they might be missing, and help them reach a confident conclusion. Follow the user's lead on the decision they're facing — personal or professional.",
   },
@@ -703,6 +706,17 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
+
+                {/* Tab mode hint — shown only before a comparison is run */}
+                {!submitted && (
+                  <p style={{
+                    fontSize:12, color:"#6e6e73", fontFamily:"'Figtree',sans-serif",
+                    marginTop:-20, marginBottom:20, letterSpacing:"0.01em",
+                    transition:"opacity 0.3s ease",
+                  }}>
+                    {task.hint}
+                  </p>
+                )}
 
                 {/* Active comparison bar — replaces the lone "+" icon, gives clear visual break */}
                 {submitted && !loading && (
