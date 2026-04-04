@@ -708,11 +708,14 @@ export default function Home() {
                   </div>
                 </section>
 
-                {/* Task chips — size controlled by globals.css .task-chip */}
+                {/* Task chips — locked once a comparison is running or has results.
+                    User must hit "+ New prompt" to switch mode, preserving the current results. */}
                 <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4, marginBottom:32, scrollbarWidth:"none" }}>
                   {TASK_CATEGORIES.map(t => (
-                    <button key={t.id} className={`task-chip${task.id === t.id ? " active" : ""}`}
-                      onClick={() => { setTask(t); setPrompt(""); resetComparison(); }}>
+                    <button key={t.id}
+                      className={`task-chip${task.id === t.id ? " active" : ""}${submitted ? " locked" : ""}`}
+                      onClick={() => { if (!submitted) { setTask(t); setPrompt(""); resetComparison(); } }}
+                      style={{ cursor: submitted ? "default" : "pointer" }}>
                       {t.label}
                     </button>
                   ))}
@@ -786,13 +789,32 @@ export default function Home() {
                     <span className="keyboard-hint" style={{ fontSize:11, color:"#8e8e93", fontFamily:"'Sora',sans-serif" }}>
                       {loading ? "Running comparison…" : submitted ? "Results ready below" : "⌘ Return to compare"}
                     </span>
-                    {/* Mobile: attempt counter lives here — taps to open limit modal */}
-                    {!submitted && attempts > 0 && !gated && (
+                    {/* Mobile: circular usage gauge — taps to open limit modal */}
+                    {!gated && (
                       <button
                         className="input-counter-mobile"
                         onClick={() => setShowLimitModal(true)}
-                        style={{ fontSize:11, fontFamily:"'Sora',sans-serif", fontWeight:500, color: attempts >= 8 ? "#f5a623" : "#8e8e93", background:"none", border:"none", cursor:"pointer", padding:0, transition:"color 0.4s ease" }}>
-                        Attempt {attempts}/{FREE_LIMIT}
+                        style={{ background:"none", border:"none", cursor:"pointer", padding:0, flexShrink:0 }}
+                        aria-label={`${attempts} of ${FREE_LIMIT} comparisons used`}>
+                        {/* SVG circular gauge with shield icon */}
+                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                          {/* Track circle */}
+                          <circle cx="14" cy="14" r="11" stroke="rgba(255,255,255,0.1)" strokeWidth="2.5" fill="none" />
+                          {/* Progress arc — clockwise from top; strokeDasharray = circumference ~69.1 */}
+                          <circle cx="14" cy="14" r="11"
+                            stroke={attempts >= 8 ? "#ff9f6b" : "#63d68d"}
+                            strokeWidth="2.5" fill="none"
+                            strokeLinecap="round"
+                            strokeDasharray={`${(attempts / FREE_LIMIT) * 69.1} 69.1`}
+                            strokeDashoffset="17.3"
+                            style={{ transition:"stroke-dasharray 0.4s ease, stroke 0.4s ease" }}
+                          />
+                          {/* Shield icon center */}
+                          <path d="M14 8.5l-4 1.6v3.2c0 2.2 1.7 4.2 4 4.7 2.3-.5 4-2.5 4-4.7V10.1L14 8.5z"
+                            fill={attempts >= 8 ? "#ff9f6b" : attempts > 0 ? "#63d68d" : "rgba(255,255,255,0.3)"}
+                            style={{ transition:"fill 0.4s ease" }}
+                          />
+                        </svg>
                       </button>
                     )}
                     <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -1029,6 +1051,22 @@ export default function Home() {
                       </div>
                     </div>
 
+                    {/* ── Back to responses — mobile only, full-width, after Model Output Summary ── */}
+                    <div className="analyze-back-mobile" style={{ marginBottom:24, justifyContent:"center" }}>
+                      <button
+                        onClick={() => goToSection("compare")}
+                        style={{
+                          width:"100%", padding:"13px 0", fontSize:13, fontWeight:600,
+                          fontFamily:"'Sora',sans-serif", color:"#f5f5f7", letterSpacing:"0.01em",
+                          background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)",
+                          borderRadius:12, cursor:"pointer", transition:"all 0.1s ease",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.12)"; }}>
+                        ← Back to responses
+                      </button>
+                    </div>
+
                     {/* ── Metric legend — static (no collapse) ── */}
                     <div style={{ border:"1px solid rgba(255,255,255,0.08)", borderRadius:14, overflow:"hidden" }}>
                       <div style={{ padding:"14px 20px", background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
@@ -1039,14 +1077,12 @@ export default function Home() {
                       <div style={{ padding:"20px 24px 24px", background:"rgba(255,255,255,0.01)" }}>
                         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:"18px 36px" }}>
                           {[
-                            { name:"Response Time",  def:"How long the model took to return its full answer from the moment you hit Compare. Reflects network and infrastructure latency — not output quality or reasoning depth." },
+                            { name:"Response Time",  def:"Wall-clock time from hitting Compare to last token — reflects real network + inference latency, not output quality." },
                             { name:"Output Tokens",  def:"The number of text chunks in the response. Roughly 1 token ≈ ¾ of a word." },
-                            { name:"Est. Read",      def:"Estimated time to read the response at an average pace of 200 words per minute." },
                             { name:"Input Tokens",   def:"The size of everything sent to the model — your prompt plus the task instructions." },
                             { name:"Relevance",      def:"How directly and completely the response addresses your specific question. Low = generic or off-topic." },
                             { name:"Faithfulness",   def:"How grounded the claims are in verifiable facts. Low = possible hallucinated details or unsupported statistics." },
                             { name:"Safety",         def:"How appropriate the response is for professional use. 100 = fully neutral and brand-safe." },
-                            { name:"Approach",       def:"A structural descriptor of how the model chose to format and present its answer." },
                           ].map(({ name, def }) => (
                             <div key={name} style={{ display:"flex", flexDirection:"column", gap:5 }}>
                               <span style={{ fontSize:12, fontWeight:700, color:"#c7c7cc", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em" }}>{name}</span>
@@ -1149,18 +1185,21 @@ export default function Home() {
             {/* Scrollable content */}
             <div style={{ overflowY:"auto", padding:"8px 28px 24px", flex:1 }}>
 
-            {/* Icon */}
-            <div style={{
-              width:40, height:40, borderRadius:"50%",
-              background:"rgba(99,214,141,0.1)", border:"1.5px solid rgba(99,214,141,0.3)",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:18, marginBottom:16,
-            }}>🔬</div>
-
-            {/* Title */}
-            <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:17, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:12 }}>
-              {FREE_LIMIT} comparisons / day
-            </h2>
+            {/* Header row: icon + title side by side — removes top whitespace */}
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+              <div style={{
+                width:36, height:36, borderRadius:"50%", flexShrink:0,
+                background:"rgba(99,214,141,0.1)", border:"1.5px solid rgba(99,214,141,0.3)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+              }}>
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 2L3 5v5c0 4.4 3 8.4 7 9.4 4-1 7-5 7-9.4V5L10 2z" fill="rgba(99,214,141,0.8)" />
+                </svg>
+              </div>
+              <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:17, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", margin:0 }}>
+                {FREE_LIMIT} comparisons / day
+              </h2>
+            </div>
 
             {/* 2-sentence explanation — option D */}
             <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#8e8e93", lineHeight:1.75, margin:0 }}>
@@ -1221,18 +1260,19 @@ export default function Home() {
             {/* Scrollable content */}
             <div style={{ overflowY:"auto", padding:"4px 28px 24px", flex:1 }}>
 
-            {/* Photo — centered */}
-            <div style={{ display:"flex", justifyContent:"center", marginBottom:18 }}>
+            {/* Photo — centered, larger for impact */}
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:20 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/abhi.jpg"
                 alt="Abhi"
-                width={130}
-                height={130}
+                width={160}
+                height={160}
                 style={{
-                  width:130, height:130, borderRadius:"50%",
+                  width:160, height:160, borderRadius:"50%",
                   objectFit:"cover",
-                  border:"2px solid rgba(255,255,255,0.14)",
+                  border:"2.5px solid rgba(255,255,255,0.18)",
+                  boxShadow:"0 0 0 4px rgba(255,255,255,0.05)",
                 }}
               />
             </div>
@@ -1247,13 +1287,13 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Bio — two paragraphs */}
+            {/* Bio */}
             <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:22 }}>
               <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:0 }}>
-                Frontier Pulse started as a personal research project in early 2026, built around one question: what does it actually look like when frontier models reason differently? The idea came from a simple need: a clean, honest way to compare frontier models with no affiliation bias. The side-by-side comparison is designed to help you see subtle differences in the latest models — in real time, on a topic relevant to you.
+                Frontier Pulse is a personal research project built around one question: what does it actually look like when frontier models reason differently? Same prompt. Same conditions. Three models, evaluated independently on relevance, faithfulness, and safety — with no pre-ranking and no stored data.
               </p>
               <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#a1a1a6", lineHeight:1.8, margin:0 }}>
-                A little bit about me, I&apos;m a native of Mumbai and currently a Cloud &amp; AI practitioner based in Chicago with a decade of enterprise experience across Public Sector, FSI, Healthcare &amp; Life Sciences, Manufacturing, and Tech. My current work sits at the intersection of AI infrastructure and customer strategy — which means I spend a lot of time thinking about how these models behave under real conditions, not ideal ones. If you&apos;re building with Google AI Studio or Claude Code, let&apos;s talk!
+                I&apos;m Abhi, a Cloud &amp; AI practitioner based in Chicago. My current day job sits at the intersection of AI infrastructure and enterprise strategy, and I spend a lot of time watching these models perform under real conditions rather than ideal ones. That perspective is baked into how Frontier Pulse is built with my own design language. If you&apos;re building with Claude Code, Google AI Studio, or thinking through agentic workflows — let&apos;s connect.
               </p>
             </div>
 

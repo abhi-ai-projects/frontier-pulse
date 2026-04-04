@@ -112,6 +112,13 @@ body {
   border-color: var(--white);
   color: var(--black);
 }
+/* Locked state: results exist, switching task would wipe them.
+   Non-active chips fade out; active chip keeps its pill style. */
+.task-chip.locked:not(.active) {
+  opacity: 0.3;
+  pointer-events: none;
+}
+.task-chip.locked:hover { border-color: var(--border); color: var(--gray-1); }
 
 .compare-btn {
   width: 100%;
@@ -216,6 +223,12 @@ textarea::-webkit-scrollbar-track    { background: transparent; }
 /* Scroll lock — applied via JS when any modal is open */
 body.modal-open { overflow: hidden; position: fixed; width: 100%; }
 
+/* Mobile-only "Back to responses" button in Analyze tab */
+.analyze-back-mobile { display: none; }
+@media (max-width: 768px) {
+  .analyze-back-mobile { display: flex; }
+}
+
 @media (max-width: 768px) {
   .side-nav-desktop    { display: none !important; }
   .main-content        { margin-left: 0; padding-bottom: 60px; }
@@ -250,8 +263,9 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; }
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
+  /* Anchor to right edge so it never clips off-screen on right-side buttons */
+  right: 0;
+  left: auto;
   background: rgba(20,20,20,0.96);
   color: #f5f5f7;
   font-size: 11px;
