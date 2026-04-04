@@ -259,7 +259,9 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; }
    Replaces the native `title` attribute tooltip which has an OS-level delay
    (~400–1000ms). This appears instantly on hover. */
 .icon-btn { position: relative; }
-.icon-btn::after {
+/* Only render the tooltip pseudo-element when data-tip is non-empty.
+   Close buttons (and any other obvious icons) use data-tip="" to opt out. */
+.icon-btn[data-tip]:not([data-tip=""])::after {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 6px);
@@ -279,4 +281,4 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; }
   transition: opacity 0s;
   z-index: 200;
 }
-.icon-btn:hover::after { opacity: 1; }
+.icon-btn[data-tip]:not([data-tip=""]):hover::after { opacity: 1; }

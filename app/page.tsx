@@ -670,7 +670,7 @@ export default function Home() {
 
           {/* ── Sections container ── */}
           {!gated && (
-            <div style={{ position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"relative" }}>
 
               {/* ════════════════════════════════════
                   SECTION 1 — PROMPT
@@ -1179,7 +1179,7 @@ export default function Home() {
           >
             {/* Sticky header row — close button always visible */}
             <div style={{ display:"flex", justifyContent:"flex-end", padding:"16px 16px 0", flexShrink:0 }}>
-              {iconBtn("✕", "Close", () => setShowLimitModal(false))}
+              {iconBtn("✕", "", () => setShowLimitModal(false))}
             </div>
 
             {/* Scrollable content */}
@@ -1254,7 +1254,7 @@ export default function Home() {
           >
             {/* Sticky header row — close button always visible */}
             <div style={{ display:"flex", justifyContent:"flex-end", padding:"16px 16px 0", flexShrink:0 }}>
-              {iconBtn("✕", "Close", () => setShowAboutModal(false))}
+              {iconBtn("✕", "", () => setShowAboutModal(false))}
             </div>
 
             {/* Scrollable content */}
@@ -1361,7 +1361,7 @@ export default function Home() {
                   {hasRes ? "Showing live data from your last run" : "Run a comparison to see live data here"}
                 </p>
               </div>
-              {iconBtn("✕", "Close", () => setShowHowItWorks(false))}
+              {iconBtn("✕", "", () => setShowHowItWorks(false))}
             </div>
 
             {/* Scrollable content */}
