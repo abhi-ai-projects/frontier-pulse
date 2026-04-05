@@ -233,35 +233,191 @@ export async function checkRateLimit(
   return { allowed: true, attemptsLeft: DAILY_LIMIT - (count + 1), windowStart: firstUse };
 }
 
+// ── Rich stats types ─────────────────────────────────────────────────────────
+
+export interface ComparisonStats {
+  country: string;       // ISO-3166-1 alpha-2, e.g. "US", or "unknown"
+  task:    string;       // "write" | "analyze" | "decide"
+  scores: {
+    claudeRelevance:    number; openaiRelevance:    number; geminiRelevance:    number;
+    claudeFaithfulness: number; openaiFaithfulness: number; geminiFaithfulness: number;
+    claudeSafety:       number; openaiSafety:       number; geminiSafety:       number;
+  };
+  timing: { claude: number; openai: number; gemini: number };
+}
+
+export interface GlobalStats {
+  today: {
+    comparisons: number; rateLimited: number; suspicious: number; newBrowsers: number;
+  };
+  allTime: {
+    comparisons: number;
+    /** Average scores per model. null when no data yet. */
+    avgScores: {
+      claude: { relevance: number | null; faithfulness: number | null; safety: number | null };
+      openai: { relevance: number | null; faithfulness: number | null; safety: number | null };
+      gemini: { relevance: number | null; faithfulness: number | null; safety: number | null };
+    };
+    /** How many comparisons each model "won" per metric */
+    wins: {
+      claude: { relevance: number; faithfulness: number; safety: number };
+      openai: { relevance: number; faithfulness: number; safety: number };
+      gemini: { relevance: number; faithfulness: number; safety: number };
+    };
+    /** Comparison count by task type */
+    tasks: { write: number; analyze: number; decide: number };
+    /** Average response time in ms per model */
+    avgTiming: { claude: number | null; openai: number | null; gemini: number | null };
+    /** Top countries by usage — sorted descending, up to 10 entries */
+    topCountries: { code: string; count: number }[];
+  };
+}
+
+// ── KV hash key names ─────────────────────────────────────────────────────────
+const COUNTRIES_KEY  = "fp:stats:alltime:countries";   // hash: {US:150, IN:40}
+const TASKS_KEY      = "fp:stats:alltime:tasks";       // hash: {write:50, analyze:80, decide:30}
+const SCORES_KEY     = "fp:stats:alltime:scores";      // hash: {claude_r_sum, claude_r_n, ...}
+const WINS_KEY       = "fp:stats:alltime:wins";        // hash: {claude_relevance, ...}
+const TIMING_KEY     = "fp:stats:alltime:timing";      // hash: {claude_sum, claude_n, ...}
+
+/** ─────────────────────────────────────────────────────────────────────────────
+ * Record rich per-comparison stats after a successful Haiku evaluation.
+ * All operations are fire-and-forget; never blocks the response.
+ */
+export async function recordComparisonStats(data: ComparisonStats): Promise<void> {
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) return;
+  try {
+    const { kv } = await import("@vercel/kv");
+    const s = data.scores;
+
+    // Determine wins (skip if both scores are 0 — model likely failed)
+    const winRelevance    = bestOf({ claude: s.claudeRelevance,    openai: s.openaiRelevance,    gemini: s.geminiRelevance });
+    const winFaithfulness = bestOf({ claude: s.claudeFaithfulness, openai: s.openaiFaithfulness, gemini: s.geminiFaithfulness });
+    const winSafety       = bestOf({ claude: s.claudeSafety,       openai: s.openaiSafety,       gemini: s.geminiSafety });
+
+    await Promise.all([
+      // Geography
+      kv.hincrby(COUNTRIES_KEY, data.country || "unknown", 1),
+
+      // Task distribution
+      kv.hincrby(TASKS_KEY, data.task || "unknown", 1),
+
+      // Score running totals (sum + count per model per metric)
+      kv.hincrby(SCORES_KEY, "claude_r_sum",  s.claudeRelevance),
+      kv.hincrby(SCORES_KEY, "claude_r_n",    s.claudeRelevance > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "openai_r_sum",  s.openaiRelevance),
+      kv.hincrby(SCORES_KEY, "openai_r_n",    s.openaiRelevance > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "gemini_r_sum",  s.geminiRelevance),
+      kv.hincrby(SCORES_KEY, "gemini_r_n",    s.geminiRelevance > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "claude_f_sum",  s.claudeFaithfulness),
+      kv.hincrby(SCORES_KEY, "claude_f_n",    s.claudeFaithfulness > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "openai_f_sum",  s.openaiFaithfulness),
+      kv.hincrby(SCORES_KEY, "openai_f_n",    s.openaiFaithfulness > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "gemini_f_sum",  s.geminiFaithfulness),
+      kv.hincrby(SCORES_KEY, "gemini_f_n",    s.geminiFaithfulness > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "claude_s_sum",  s.claudeSafety),
+      kv.hincrby(SCORES_KEY, "claude_s_n",    s.claudeSafety > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "openai_s_sum",  s.openaiSafety),
+      kv.hincrby(SCORES_KEY, "openai_s_n",    s.openaiSafety > 0 ? 1 : 0),
+      kv.hincrby(SCORES_KEY, "gemini_s_sum",  s.geminiSafety),
+      kv.hincrby(SCORES_KEY, "gemini_s_n",    s.geminiSafety > 0 ? 1 : 0),
+
+      // Model wins
+      ...(winRelevance    ? [kv.hincrby(WINS_KEY, `${winRelevance}_relevance`,    1)] : []),
+      ...(winFaithfulness ? [kv.hincrby(WINS_KEY, `${winFaithfulness}_faithfulness`, 1)] : []),
+      ...(winSafety       ? [kv.hincrby(WINS_KEY, `${winSafety}_safety`,          1)] : []),
+
+      // Response timing
+      ...(data.timing.claude > 0 ? [kv.hincrby(TIMING_KEY, "claude_sum", data.timing.claude), kv.hincrby(TIMING_KEY, "claude_n", 1)] : []),
+      ...(data.timing.openai > 0 ? [kv.hincrby(TIMING_KEY, "openai_sum", data.timing.openai), kv.hincrby(TIMING_KEY, "openai_n", 1)] : []),
+      ...(data.timing.gemini > 0 ? [kv.hincrby(TIMING_KEY, "gemini_sum", data.timing.gemini), kv.hincrby(TIMING_KEY, "gemini_n", 1)] : []),
+    ]);
+  } catch { /* best-effort */ }
+}
+
+/** Returns the model name with the highest score, or null on tie / all-zero. */
+function bestOf(scores: Record<string, number>): string | null {
+  const entries = Object.entries(scores).filter(([, v]) => v > 0);
+  if (entries.length === 0) return null;
+  const max = Math.max(...entries.map(([, v]) => v));
+  const winners = entries.filter(([, v]) => v === max);
+  return winners.length === 1 ? winners[0][0] : null; // null on tie
+}
+
+/** Helper to safely compute avg from a hash record. */
+function avg(h: Record<string, number>, sumField: string, nField: string): number | null {
+  const n = h[nField] ?? 0;
+  return n > 0 ? Math.round((h[sumField] ?? 0) / n) : null;
+}
+
 /** ─────────────────────────────────────────────────────────────────────────────
  * Aggregate stats for the admin dashboard.
- * Returns today's counters (UTC date) and the all-time comparison total.
  */
-export async function getGlobalStats(): Promise<{
-  today: {
-    comparisons:  number;
-    rateLimited:  number;
-    suspicious:   number;
-    newBrowsers:  number;
+export async function getGlobalStats(): Promise<GlobalStats> {
+  const emptyWins = { claude: { relevance: 0, faithfulness: 0, safety: 0 }, openai: { relevance: 0, faithfulness: 0, safety: 0 }, gemini: { relevance: 0, faithfulness: 0, safety: 0 } };
+  const emptyAvg  = { claude: { relevance: null, faithfulness: null, safety: null }, openai: { relevance: null, faithfulness: null, safety: null }, gemini: { relevance: null, faithfulness: null, safety: null } };
+  const empty: GlobalStats = {
+    today: { comparisons: 0, rateLimited: 0, suspicious: 0, newBrowsers: 0 },
+    allTime: { comparisons: 0, avgScores: emptyAvg, wins: emptyWins, tasks: { write: 0, analyze: 0, decide: 0 }, avgTiming: { claude: null, openai: null, gemini: null }, topCountries: [] },
   };
-  allTime: { comparisons: number };
-}> {
-  const empty = { today: { comparisons: 0, rateLimited: 0, suspicious: 0, newBrowsers: 0 }, allTime: { comparisons: 0 } };
   if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) return empty;
 
   try {
     const { kv } = await import("@vercel/kv");
-    const [comparisons, rateLimited, suspicious, newBrowsers, allTimeComparisons] = await Promise.all([
+
+    const [
+      comparisons, rateLimited, suspicious, newBrowsers, allTimeComparisons,
+      scoresH, winsH, tasksH, timingH, countriesH,
+    ] = await Promise.all([
       kv.get<number>(statsKey("comparisons")).then(v => v ?? 0),
       kv.get<number>(statsKey("rate_limited")).then(v => v ?? 0),
       kv.get<number>(statsKey("suspicious")).then(v => v ?? 0),
       kv.get<number>(statsKey("new_browsers")).then(v => v ?? 0),
       kv.get<number>("fp:stats:alltime:comparisons").then(v => v ?? 0),
+      kv.hgetall(SCORES_KEY).then(v => numericHash(v)),
+      kv.hgetall(WINS_KEY).then(v => numericHash(v)),
+      kv.hgetall(TASKS_KEY).then(v => numericHash(v)),
+      kv.hgetall(TIMING_KEY).then(v => numericHash(v)),
+      kv.hgetall(COUNTRIES_KEY).then(v => numericHash(v)),
     ]);
-    return { today: { comparisons, rateLimited, suspicious, newBrowsers }, allTime: { comparisons: allTimeComparisons } };
+
+    const topCountries = Object.entries(countriesH)
+      .map(([code, count]) => ({ code, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return {
+      today: { comparisons, rateLimited, suspicious, newBrowsers },
+      allTime: {
+        comparisons: allTimeComparisons,
+        avgScores: {
+          claude: { relevance: avg(scoresH, "claude_r_sum", "claude_r_n"), faithfulness: avg(scoresH, "claude_f_sum", "claude_f_n"), safety: avg(scoresH, "claude_s_sum", "claude_s_n") },
+          openai: { relevance: avg(scoresH, "openai_r_sum", "openai_r_n"), faithfulness: avg(scoresH, "openai_f_sum", "openai_f_n"), safety: avg(scoresH, "openai_s_sum", "openai_s_n") },
+          gemini: { relevance: avg(scoresH, "gemini_r_sum", "gemini_r_n"), faithfulness: avg(scoresH, "gemini_f_sum", "gemini_f_n"), safety: avg(scoresH, "gemini_s_sum", "gemini_s_n") },
+        },
+        wins: {
+          claude: { relevance: winsH.claude_relevance ?? 0, faithfulness: winsH.claude_faithfulness ?? 0, safety: winsH.claude_safety ?? 0 },
+          openai: { relevance: winsH.openai_relevance ?? 0, faithfulness: winsH.openai_faithfulness ?? 0, safety: winsH.openai_safety ?? 0 },
+          gemini: { relevance: winsH.gemini_relevance ?? 0, faithfulness: winsH.gemini_faithfulness ?? 0, safety: winsH.gemini_safety ?? 0 },
+        },
+        tasks: { write: tasksH.write ?? 0, analyze: tasksH.analyze ?? 0, decide: tasksH.decide ?? 0 },
+        avgTiming: {
+          claude: timingH.claude_n ? Math.round(timingH.claude_sum / timingH.claude_n) : null,
+          openai: timingH.openai_n ? Math.round(timingH.openai_sum / timingH.openai_n) : null,
+          gemini: timingH.gemini_n ? Math.round(timingH.gemini_sum / timingH.gemini_n) : null,
+        },
+        topCountries,
+      },
+    };
   } catch {
     return empty;
   }
+}
+
+/** Coerce all values in a KV hgetall result to numbers. */
+function numericHash(h: Record<string, unknown> | null): Record<string, number> {
+  if (!h) return {};
+  return Object.fromEntries(Object.entries(h).map(([k, v]) => [k, Number(v) || 0]));
 }
 
 /** Increment the "suspicious requests" counter — exported so route.ts can call it

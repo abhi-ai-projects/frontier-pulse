@@ -241,9 +241,10 @@ export default function Home() {
   const [attempts,       setAttempts]       = useState(getAttempts());
   // Gate is true immediately if the user has already exhausted today's limit on load
   const [gated,          setGated]          = useState(() => getAttempts() >= FREE_LIMIT);
-  const [showHowItWorks,  setShowHowItWorks]  = useState(false);
-  const [showLimitModal,  setShowLimitModal]  = useState(false);
-  const [showAboutModal,  setShowAboutModal]  = useState(false);
+  const [showHowItWorks,    setShowHowItWorks]    = useState(false);
+  const [showLimitModal,    setShowLimitModal]    = useState(false);
+  const [showAboutModal,    setShowAboutModal]    = useState(false);
+  const [safetyViolation,   setSafetyViolation]   = useState(false);
   // Track per-card scroll-to-bottom to hide fade gradient when fully scrolled
   const [atBottom,      setAtBottom]      = useState<Record<string, boolean>>({});
 
@@ -292,7 +293,7 @@ export default function Home() {
 
   // Lock body scroll when any modal is open (iOS-safe: save + restore scroll position)
   useEffect(() => {
-    const isOpen = showAboutModal || showHowItWorks || showLimitModal;
+    const isOpen = showAboutModal || showHowItWorks || showLimitModal || safetyViolation;
     if (isOpen) {
       const scrollY = window.scrollY;
       document.body.style.overflow = "hidden";
@@ -313,7 +314,7 @@ export default function Home() {
       document.body.style.top = "";
       document.body.style.width = "";
     };
-  }, [showAboutModal, showHowItWorks, showLimitModal]);
+  }, [showAboutModal, showHowItWorks, showLimitModal, safetyViolation]);
 
   // ─── Rotating hook line ───────────────────────────────────────────────────
   // Fades out, swaps text, fades back in every 4 s.
@@ -378,6 +379,11 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
+        // 422 = content safety violation — show blocking modal, don't consume an attempt
+        if (res.status === 422 && data.error === "CONTENT_VIOLATION") {
+          setSafetyViolation(true);
+          return;
+        }
         // 429 = server-enforced daily limit reached (e.g. via different browser/IP)
         if (res.status === 429) {
           trackAttemptLimitReached(FREE_LIMIT);
@@ -1201,6 +1207,79 @@ export default function Home() {
 
       </main>
 
+      {/* ── Safety violation modal — blocking, no dismiss, single refresh button ── */}
+      {safetyViolation && (
+        <div
+          style={{
+            position:"fixed", inset:0, zIndex:300,
+            background:"rgba(0,0,0,0.92)",
+            backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            padding:"20px",
+            animation:"fadeIn 0.2s ease both",
+          }}
+        >
+          <div
+            style={{
+              width:"100%", maxWidth:380,
+              background:"#1c1c1e",
+              border:"1px solid rgba(255,100,80,0.25)",
+              borderRadius:20,
+              overflow:"hidden",
+              animation:"fadeUp 0.3s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            <div style={{ padding:"32px 28px 28px", display:"flex", flexDirection:"column", gap:20 }}>
+              {/* Icon + title */}
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{
+                  width:38, height:38, borderRadius:"50%", flexShrink:0,
+                  background:"rgba(255,80,60,0.10)", border:"1.5px solid rgba(255,80,60,0.30)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                }}>
+                  {/* Shield icon */}
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 2L3 5v5c0 4.4 3 8.4 7 9.4 4-1 7-5 7-9.4V5L10 2z" fill="none" stroke="rgba(255,100,80,0.9)" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <path d="M7.5 10l2 2 3-3" stroke="rgba(255,100,80,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:16, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.02em", margin:0 }}>
+                  Prompt not allowed
+                </h2>
+              </div>
+
+              {/* Body */}
+              <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#8e8e93", lineHeight:1.75, margin:0 }}>
+                Frontier Pulse was built on a foundation of safety and ethics. Every prompt is screened before reaching any model — this one triggered a content policy flag.
+              </p>
+              <p style={{ fontFamily:"'Figtree',sans-serif", fontSize:13, color:"#6e6e73", lineHeight:1.75, margin:0 }}>
+                This comparison was not charged against your daily limit.
+              </p>
+
+              {/* Single action */}
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  marginTop:4,
+                  width:"100%", padding:"12px 0",
+                  background:"rgba(255,80,60,0.12)",
+                  border:"1px solid rgba(255,80,60,0.25)",
+                  borderRadius:10,
+                  color:"rgba(255,120,100,1)",
+                  fontFamily:"'Sora',sans-serif", fontSize:13, fontWeight:600,
+                  cursor:"pointer", letterSpacing:"-0.01em",
+                  transition:"background 0.15s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,60,0.20)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,60,0.12)"; }}
+              >
+                ← Return to Frontier Pulse
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Daily limit modal ── */}
       {showLimitModal && (
         <div
@@ -1269,7 +1348,7 @@ export default function Home() {
 
             {/* Fingerprinting note */}
             <p style={{ marginTop:12, fontSize:11, fontFamily:"'Figtree',sans-serif", color:"#6e6e73", lineHeight:1.6 }}>
-              Each browser gets its own 10 comparisons — Chrome and its incognito mode share a count, but Safari, Firefox, and other devices each get a fresh quota.
+              Usage is tracked per device across browsers — switching to incognito on the same device won&apos;t reset your count.
             </p>
             </div>{/* end scrollable content */}
           </div>

@@ -18,7 +18,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
-import { checkRateLimit, recordSuspiciousRequest } from "@/app/lib/rateLimit";
+import { checkRateLimit, recordSuspiciousRequest, recordComparisonStats } from "@/app/lib/rateLimit";
 
 // ── API clients ───────────────────────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -108,24 +108,30 @@ export async function POST(req: NextRequest) {
   if (sanitized.length === 0)
     return NextResponse.json({ error: "Invalid input detected." }, { status: 400 });
 
-  // Prompt injection check
+  // Prompt injection check — fast regex pass before spending any API credits
   if (INJECTION_PATTERNS.some((p) => p.test(sanitized)))
-    return NextResponse.json({ error: "Invalid input detected." }, { status: 400 });
+    return NextResponse.json({ error: "CONTENT_VIOLATION" }, { status: 422 });
 
   // ── 3. OpenAI Moderation ──────────────────────────────────────────────────
   // Free endpoint — screens for harmful content before spending tokens on models.
-  // We don't block on moderation errors; they just get logged.
+  // Runs BEFORE the three main model calls so a flagged prompt costs nothing.
+  // We don't block on moderation API errors; they get logged and we let through.
   try {
     const modResult = await openai.moderations.create({ input: sanitized });
     if (modResult.results[0]?.flagged) {
-      return NextResponse.json(
-        { error: "This prompt may conflict with one or more provider content policies — try rephrasing." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "CONTENT_VIOLATION" }, { status: 422 });
     }
   } catch (modErr) {
     console.warn("[moderation] check failed (non-blocking):", modErr);
   }
+
+  // ── 3b. Derive task label + country (used for analytics) ─────────────────
+  // Task label — short key derived from the whitelisted systemContext value
+  const taskLabel = systemContext.includes("communication expert") ? "write"
+    : systemContext.includes("strategy and analysis")             ? "analyze"
+    : "decide";
+  // Country — Vercel injects x-vercel-ip-country on edge requests (ISO 3166-1 alpha-2)
+  const country = req.headers.get("x-vercel-ip-country") ?? "unknown";
 
   // ── 4. System prompt ───────────────────────────────────────────────────────
   const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
@@ -304,7 +310,25 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
       console.error("Insights generation failed:", e);
     }
 
-    // ── 9. Return response ─────────────────────────────────────────────────────
+    // ── 9. Record rich analytics stats (fire-and-forget, never blocks response) ─
+    void recordComparisonStats({
+      country,
+      task: taskLabel,
+      scores: {
+        claudeRelevance:    insights.claudeRelevance    ?? 0,
+        openaiRelevance:    insights.openaiRelevance    ?? 0,
+        geminiRelevance:    insights.geminiRelevance    ?? 0,
+        claudeFaithfulness: insights.claudeFaithfulness ?? 0,
+        openaiFaithfulness: insights.openaiFaithfulness ?? 0,
+        geminiFaithfulness: insights.geminiFaithfulness ?? 0,
+        claudeSafety:       insights.claudeSafety       ?? 0,
+        openaiSafety:       insights.openaiSafety       ?? 0,
+        geminiSafety:       insights.geminiSafety       ?? 0,
+      },
+      timing,
+    });
+
+    // ── 10. Return response ────────────────────────────────────────────────────
     // attemptsLeft + windowStart let the client stay in sync with the server's
     // authoritative state — including the correct reset time even in incognito.
     return NextResponse.json({
