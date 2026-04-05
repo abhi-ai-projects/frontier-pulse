@@ -58,7 +58,7 @@ const HOOK_LINES = [
 const HOW_IT_WORKS_STEPS = [
   {
     title: "You enter a prompt",
-    desc: "Choose Write, Analyze, or Decide. Type what you need — up to 1,000 characters. The same prompt goes to every model so you're comparing apples to apples.",
+    desc: "Choose Analyze, Write, or Decide. Type what you need — up to 1,000 characters. The same prompt goes to every model so you're comparing apples to apples.",
     color: "#f5f5f7",
   },
   {
@@ -754,8 +754,7 @@ export default function Home() {
                       className={`task-chip${task.id === t.id ? " active" : ""}${submitted ? " locked" : ""}`}
                       onClick={() => { if (!submitted) { setTask(t); setPrompt(""); resetComparison(); } }}
                       style={{ cursor: submitted ? "default" : "pointer" }}>
-                      <span className="task-chip-label">{t.label}</span>
-                      <span className="task-chip-sub">{t.sub}</span>
+                      {t.label}
                     </button>
                   ))}
                 </div>
