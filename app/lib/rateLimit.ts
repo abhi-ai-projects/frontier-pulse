@@ -54,6 +54,49 @@ export interface RateLimitResult {
 }
 
 /**
+ * Read-only status check — returns the current usage without incrementing.
+ * Used by GET /api/status so the client can sync the counter on page load
+ * without having to run a full comparison first.
+ */
+export async function getRateLimitStatus(
+  ip: string,
+  fingerprint?: string,
+): Promise<{ attemptsLeft: number; windowStart: number }> {
+  const now   = Date.now();
+  const ipKey = rlKey(`ip:${ip}`);
+  const fpKey = fingerprint ? rlKey(`fp:${fingerprint}`) : null;
+
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    try {
+      const { kv } = await import("@vercel/kv");
+      const [ipRec, fpRec] = await Promise.all([
+        kv.get<WindowRecord>(ipKey),
+        fpKey ? kv.get<WindowRecord>(fpKey) : Promise.resolve<WindowRecord | null>(null),
+      ]);
+
+      const current = Math.max(effectiveCount(ipRec, now), effectiveCount(fpRec, now));
+
+      const ipStart = ipRec && now - ipRec.firstUse <= WINDOW_MS ? ipRec.firstUse : now;
+      const fpStart = fpRec && now - fpRec.firstUse <= WINDOW_MS ? fpRec.firstUse : now;
+      const windowStart = fpKey ? Math.min(ipStart, fpStart) : ipStart;
+
+      return { attemptsLeft: Math.max(0, DAILY_LIMIT - current), windowStart };
+    } catch {
+      // KV outage — fail silently, localStorage stays as the fallback.
+      return { attemptsLeft: DAILY_LIMIT, windowStart: Date.now() };
+    }
+  }
+
+  // ── In-memory fallback (local dev) ────────────────────────────────────────
+  const existing = memory.get(ipKey) ?? null;
+  const current  = effectiveCount(existing, now);
+  return {
+    attemptsLeft: Math.max(0, DAILY_LIMIT - current),
+    windowStart:  existing?.firstUse ?? now,
+  };
+}
+
+/**
  * Check and increment the 24-hour rolling quota for an IP + optional fingerprint.
  * Call this before running any model API calls.
  */

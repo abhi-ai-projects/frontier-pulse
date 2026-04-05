@@ -328,6 +328,28 @@ export default function Home() {
     return () => clearInterval(t);
   }, []);
 
+  // ─── Sync attempt count on mount ────────────────────────────────────────────
+  // Calls the read-only /api/status endpoint once on page load so the counter
+  // is immediately accurate even in incognito or a fresh browser, without
+  // requiring the user to run a comparison first.
+  useEffect(() => {
+    const fp = buildFingerprint();
+    fetch("/api/status", { headers: { "X-FP": fp } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data || typeof data.attemptsLeft !== "number") return;
+        const used = FREE_LIMIT - data.attemptsLeft;
+        // Only update if server says more have been used than localStorage knows about —
+        // avoids clobbering a higher local count on a flaky network response.
+        if (used > getAttempts()) {
+          setAttemptCount(used, typeof data.windowStart === "number" ? data.windowStart : undefined);
+          setAttempts(used);
+          if (used >= FREE_LIMIT) setGated(true);
+        }
+      })
+      .catch(() => {}); // fail silently — localStorage remains the fallback
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Core comparison handler ────────────────────────────────────────────────
   // Fires after the user clicks Compare. Runs client-side gate first (fast),
   // then sends prompt + systemContext to POST /api/compare which calls all 3
