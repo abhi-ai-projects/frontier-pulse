@@ -18,8 +18,8 @@ export default function PrivacyPage() {
     }}>
       {/* Top bar */}
       <div style={{
-        borderBottom: "1px solid #1e1e1e",
-        padding: "14px 24px",
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        padding: "10px 32px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -27,9 +27,9 @@ export default function PrivacyPage() {
         <Link href="/" style={{
           display: "flex",
           alignItems: "center",
-          gap: "10px",
+          gap: 11,
           textDecoration: "none",
-          color: "#e5e5e7",
+          color: "#f5f5f7",
         }}>
           {/* Logo */}
           <svg width="32" height="24" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
             <circle cx="14" cy="9" r="4" fill="#63d68d"/>
             <circle cx="24" cy="9" r="4" fill="#6ab4f5"/>
           </svg>
-          <span style={{ fontSize: "22px", fontWeight: 700, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.03em" }}>Frontier Pulse</span>
+          <span style={{ fontSize: "22px", fontWeight: 700, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.03em", color: "#f5f5f7" }}>Frontier Pulse</span>
         </Link>
         <Link href="/" style={{
           fontSize: "13px",
