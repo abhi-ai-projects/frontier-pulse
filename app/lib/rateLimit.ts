@@ -4,11 +4,20 @@
  * Server-side rate limiting for Frontier Pulse — rolling 24-hour window.
  *
  * Strategy:
- *   • Primary store: Vercel KV (Redis), keyed per IP *and* per browser fingerprint.
- *     Counting against whichever key has the higher usage ensures that incognito
- *     windows (new localStorage) don't bypass the cap on the same device.
- *   • Each key stores { firstUse: ms timestamp, count: number }.
- *     The 24-hour window starts from first use, not midnight UTC.
+ *   • Primary limit  — per browser fingerprint: DAILY_LIMIT (10) comparisons.
+ *     Each unique browser gets its own independent quota. Colleagues on shared
+ *     office WiFi each get their own 10; they don't share a pool.
+ *
+ *   • Secondary limit — per IP: IP_DAILY_LIMIT (200) comparisons.
+ *     A high backstop that only fires against scripted abuse from a single
+ *     network. Not intended to affect real users.
+ *
+ *   • When no fingerprint is sent (rare), IP is used as the sole signal and
+ *     the tighter DAILY_LIMIT applies, acting conservatively.
+ *
+ *   • Each KV record stores { firstUse: ms timestamp, count: number }.
+ *     The 24-hour window is rolling from first use, not midnight UTC.
+ *
  *   • Fallback: in-process Map for local development (resets on cold start).
  *
  * How to enable KV in production:
@@ -22,9 +31,10 @@
  *   Set BATCH_SECRET in your Vercel environment (never commit it).
  */
 
-export const DAILY_LIMIT = 10;
-const WINDOW_MS           = 24 * 60 * 60 * 1000; // 24 h in ms
-const TTL_SECONDS         = 90_000;               // 25 h — lets keys expire naturally after window
+export const DAILY_LIMIT    = 10;   // per browser fingerprint — the user-facing quota
+const IP_DAILY_LIMIT        = 200;  // per IP — bot/abuse backstop only
+const WINDOW_MS             = 24 * 60 * 60 * 1000; // 24 h in ms
+const TTL_SECONDS           = 90_000;               // 25 h — lets keys expire naturally
 
 interface WindowRecord { firstUse: number; count: number; }
 
@@ -44,10 +54,15 @@ function effectiveCount(rec: WindowRecord | null, now: number): number {
   return rec.count;
 }
 
+/** Preserved firstUse if still within the window, otherwise now (fresh start). */
+function resolvedFirstUse(rec: WindowRecord | null, now: number): number {
+  return rec && now - rec.firstUse <= WINDOW_MS ? rec.firstUse : now;
+}
+
 export interface RateLimitResult {
   allowed:      boolean;
   attemptsLeft: number;
-  /** Unix ms timestamp of the first request in this rolling window.
+  /** Unix ms timestamp when the fingerprint's 24-hour window started.
    *  Returned so the client can display an accurate reset time even when
    *  localStorage is empty (incognito, fresh browser, storage cleared). */
   windowStart:  number;
@@ -74,13 +89,20 @@ export async function getRateLimitStatus(
         fpKey ? kv.get<WindowRecord>(fpKey) : Promise.resolve<WindowRecord | null>(null),
       ]);
 
-      const current = Math.max(effectiveCount(ipRec, now), effectiveCount(fpRec, now));
+      const fpCount = effectiveCount(fpRec, now);
+      const ipCount = effectiveCount(ipRec, now);
 
-      const ipStart = ipRec && now - ipRec.firstUse <= WINDOW_MS ? ipRec.firstUse : now;
-      const fpStart = fpRec && now - fpRec.firstUse <= WINDOW_MS ? fpRec.firstUse : now;
-      const windowStart = fpKey ? Math.min(ipStart, fpStart) : ipStart;
+      // attemptsLeft is always fingerprint-based (the user-facing quota).
+      // Fall back to IP-based when no fingerprint is available.
+      const attemptsLeft = fpKey
+        ? Math.max(0, DAILY_LIMIT - fpCount)
+        : Math.max(0, DAILY_LIMIT - ipCount);
 
-      return { attemptsLeft: Math.max(0, DAILY_LIMIT - current), windowStart };
+      const windowStart = fpKey
+        ? resolvedFirstUse(fpRec, now)   // user's personal window
+        : resolvedFirstUse(ipRec, now);
+
+      return { attemptsLeft, windowStart };
     } catch {
       // KV outage — fail silently, localStorage stays as the fallback.
       return { attemptsLeft: DAILY_LIMIT, windowStart: Date.now() };
@@ -88,10 +110,9 @@ export async function getRateLimitStatus(
   }
 
   // ── In-memory fallback (local dev) ────────────────────────────────────────
-  const existing = memory.get(ipKey) ?? null;
-  const current  = effectiveCount(existing, now);
+  const existing = memory.get(fpKey ?? ipKey) ?? null;
   return {
-    attemptsLeft: Math.max(0, DAILY_LIMIT - current),
+    attemptsLeft: Math.max(0, DAILY_LIMIT - effectiveCount(existing, now)),
     windowStart:  existing?.firstUse ?? now,
   };
 }
@@ -126,49 +147,54 @@ export async function checkRateLimit(
         fpKey ? kv.get<WindowRecord>(fpKey) : Promise.resolve<WindowRecord | null>(null),
       ]);
 
-      // Enforce the stricter of IP vs fingerprint
-      const current = Math.max(effectiveCount(ipRec, now), effectiveCount(fpRec, now));
-      if (current >= DAILY_LIMIT) {
-        // Return the actual window start so the client can show the correct reset time
-        // even when blocked (e.g. a fresh browser that hits the limit on its first request).
-        const ipStart = ipRec && now - ipRec.firstUse <= WINDOW_MS ? ipRec.firstUse : now;
-        const fpStart = fpRec && now - fpRec.firstUse <= WINDOW_MS ? fpRec.firstUse : now;
-        const windowStart = fpKey ? Math.min(ipStart, fpStart) : ipStart;
+      const fpCount = effectiveCount(fpRec, now);
+      const ipCount = effectiveCount(ipRec, now);
+
+      // ── Blocking check ──────────────────────────────────────────────────
+      // Primary: fingerprint over per-browser limit.
+      // Secondary: IP over abuse backstop (independent of fingerprint limit).
+      // When no fingerprint is sent, apply the tighter DAILY_LIMIT to IP.
+      const fpBlocked = fpKey ? fpCount >= DAILY_LIMIT    : false;
+      const ipBlocked = fpKey ? ipCount >= IP_DAILY_LIMIT : ipCount >= DAILY_LIMIT;
+
+      if (fpBlocked || ipBlocked) {
+        const windowStart = fpKey
+          ? resolvedFirstUse(fpRec, now)
+          : resolvedFirstUse(ipRec, now);
         return { allowed: false, attemptsLeft: 0, windowStart };
       }
 
-      const newCount = current + 1;
-
-      // Preserve firstUse if still inside the window; otherwise this is a fresh start
-      const ipFirstUse = (ipRec && now - ipRec.firstUse <= WINDOW_MS) ? ipRec.firstUse : now;
-      const fpFirstUse = (fpRec && now - fpRec.firstUse <= WINDOW_MS) ? fpRec.firstUse : now;
+      // ── Increment ───────────────────────────────────────────────────────
+      // IP and FP counters advance independently — each tracks its own window.
+      const ipFirstUse = resolvedFirstUse(ipRec, now);
+      const fpFirstUse = fpKey ? resolvedFirstUse(fpRec, now) : now;
 
       await Promise.all([
-        kv.set<WindowRecord>(ipKey, { firstUse: ipFirstUse, count: newCount }, { ex: TTL_SECONDS }),
+        kv.set<WindowRecord>(ipKey, { firstUse: ipFirstUse, count: ipCount + 1 }, { ex: TTL_SECONDS }),
         fpKey
-          ? kv.set<WindowRecord>(fpKey, { firstUse: fpFirstUse, count: newCount }, { ex: TTL_SECONDS })
+          ? kv.set<WindowRecord>(fpKey, { firstUse: fpFirstUse, count: fpCount + 1 }, { ex: TTL_SECONDS })
           : Promise.resolve(),
       ]);
 
-      // windowStart: the earliest point at which the 24-hour window started for this user.
-      // We take the minimum of the IP and FP firstUse values so that a new browser or
-      // device on an existing IP inherits the original window start (not "now"), ensuring
-      // the reset time shown is consistent across Chrome, Incognito, Safari, etc.
-      const windowStart = fpKey ? Math.min(ipFirstUse, fpFirstUse) : ipFirstUse;
-      return { allowed: true, attemptsLeft: DAILY_LIMIT - newCount, windowStart };
+      // attemptsLeft and windowStart are always fingerprint-based —
+      // that's the limit the user actually experiences.
+      const attemptsLeft = fpKey ? DAILY_LIMIT - (fpCount + 1) : DAILY_LIMIT - (ipCount + 1);
+      const windowStart  = fpKey ? fpFirstUse : ipFirstUse;
+      return { allowed: true, attemptsLeft, windowStart };
+
     } catch (err) {
       // KV outage — fail open so users aren't locked out.
-      // Client-side localStorage gate still provides a UX-level fallback.
       console.error("[rateLimit] KV error — failing open:", err);
       return { allowed: true, attemptsLeft: 1, windowStart: Date.now() };
     }
   }
 
   // ── In-memory fallback (local dev) ────────────────────────────────────────
-  const existing = memory.get(ipKey) ?? null;
-  const current  = effectiveCount(existing, now);
-  if (current >= DAILY_LIMIT) return { allowed: false, attemptsLeft: 0, windowStart: existing?.firstUse ?? Date.now() };
-  const firstUse = (existing && now - existing.firstUse <= WINDOW_MS) ? existing.firstUse : now;
-  memory.set(ipKey, { firstUse, count: current + 1 });
-  return { allowed: true, attemptsLeft: DAILY_LIMIT - (current + 1), windowStart: firstUse };
+  const storeKey  = fpKey ?? ipKey;
+  const existing  = memory.get(storeKey) ?? null;
+  const count     = effectiveCount(existing, now);
+  if (count >= DAILY_LIMIT) return { allowed: false, attemptsLeft: 0, windowStart: existing?.firstUse ?? Date.now() };
+  const firstUse  = resolvedFirstUse(existing, now);
+  memory.set(storeKey, { firstUse, count: count + 1 });
+  return { allowed: true, attemptsLeft: DAILY_LIMIT - (count + 1), windowStart: firstUse };
 }

@@ -1269,7 +1269,7 @@ export default function Home() {
 
             {/* Fingerprinting note */}
             <p style={{ marginTop:12, fontSize:11, fontFamily:"'Figtree',sans-serif", color:"#6e6e73", lineHeight:1.6 }}>
-              Usage is tracked per device across browsers — switching to incognito or a different browser on the same device won&apos;t reset your count.
+              Each browser gets its own 10 comparisons — Chrome and its incognito mode share a count, but Safari, Firefox, and other devices each get a fresh quota.
             </p>
             </div>{/* end scrollable content */}
           </div>
