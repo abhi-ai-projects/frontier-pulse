@@ -86,7 +86,12 @@ export async function checkRateLimit(
       // Enforce the stricter of IP vs fingerprint
       const current = Math.max(effectiveCount(ipRec, now), effectiveCount(fpRec, now));
       if (current >= DAILY_LIMIT) {
-        return { allowed: false, attemptsLeft: 0, windowStart: Date.now() };
+        // Return the actual window start so the client can show the correct reset time
+        // even when blocked (e.g. a fresh browser that hits the limit on its first request).
+        const ipStart = ipRec && now - ipRec.firstUse <= WINDOW_MS ? ipRec.firstUse : now;
+        const fpStart = fpRec && now - fpRec.firstUse <= WINDOW_MS ? fpRec.firstUse : now;
+        const windowStart = fpKey ? Math.min(ipStart, fpStart) : ipStart;
+        return { allowed: false, attemptsLeft: 0, windowStart };
       }
 
       const newCount = current + 1;
@@ -102,9 +107,11 @@ export async function checkRateLimit(
           : Promise.resolve(),
       ]);
 
-      // windowStart: fingerprint is the most reliable per-device signal; fall back to IP.
-      // The client uses this to display an accurate reset time even across incognito sessions.
-      const windowStart = fpKey ? fpFirstUse : ipFirstUse;
+      // windowStart: the earliest point at which the 24-hour window started for this user.
+      // We take the minimum of the IP and FP firstUse values so that a new browser or
+      // device on an existing IP inherits the original window start (not "now"), ensuring
+      // the reset time shown is consistent across Chrome, Incognito, Safari, etc.
+      const windowStart = fpKey ? Math.min(ipFirstUse, fpFirstUse) : ipFirstUse;
       return { allowed: true, attemptsLeft: DAILY_LIMIT - newCount, windowStart };
     } catch (err) {
       // KV outage — fail open so users aren't locked out.
@@ -117,7 +124,7 @@ export async function checkRateLimit(
   // ── In-memory fallback (local dev) ────────────────────────────────────────
   const existing = memory.get(ipKey) ?? null;
   const current  = effectiveCount(existing, now);
-  if (current >= DAILY_LIMIT) return { allowed: false, attemptsLeft: 0, windowStart: Date.now() };
+  if (current >= DAILY_LIMIT) return { allowed: false, attemptsLeft: 0, windowStart: existing?.firstUse ?? Date.now() };
   const firstUse = (existing && now - existing.firstUse <= WINDOW_MS) ? existing.firstUse : now;
   memory.set(ipKey, { firstUse, count: current + 1 });
   return { allowed: true, attemptsLeft: DAILY_LIMIT - (current + 1), windowStart: firstUse };

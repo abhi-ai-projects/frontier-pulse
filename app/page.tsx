@@ -357,7 +357,14 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) {
         // 429 = server-enforced daily limit reached (e.g. via different browser/IP)
-        if (res.status === 429) { trackAttemptLimitReached(FREE_LIMIT); setGated(true); return; }
+        if (res.status === 429) {
+          trackAttemptLimitReached(FREE_LIMIT);
+          // Sync localStorage with the server's window start so the "resets at" label is
+          // accurate even on a fresh browser that's blocked on its very first request.
+          if (typeof data.windowStart === "number") setAttemptCount(FREE_LIMIT, data.windowStart);
+          setGated(true);
+          return;
+        }
         setError(data.error || "Something went wrong.");
         return;
       }
@@ -1219,7 +1226,7 @@ export default function Home() {
 
             {/* Fingerprinting note */}
             <p style={{ marginTop:12, fontSize:11, fontFamily:"'Figtree',sans-serif", color:"#6e6e73", lineHeight:1.6 }}>
-              Usage is tracked per device across browsers — switching to incognito or a different browser on the same device won&apos;t reset your count.
+              Limit is tracked by IP address. Incognito windows and different browsers on the same network share the same daily quota.
             </p>
             </div>{/* end scrollable content */}
           </div>

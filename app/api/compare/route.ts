@@ -51,8 +51,10 @@ export async function POST(req: NextRequest) {
 
   const { allowed, attemptsLeft, windowStart } = await checkRateLimit(ip, fingerprint, batchKey);
   if (!allowed) {
+    // Include windowStart so the client can display the accurate reset time even on a
+    // fresh browser that gets blocked on its very first request (localStorage would be empty).
     return NextResponse.json(
-      { error: "You've reached your 10 daily comparisons. Come back tomorrow — resets at midnight UTC." },
+      { error: "You've reached your 10 daily comparisons.", windowStart },
       { status: 429 },
     );
   }
