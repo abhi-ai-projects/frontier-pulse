@@ -228,7 +228,7 @@ function estReadTime(outputTokens: number): string {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const [section,   setSection]   = useState<Section>("prompt");
-  const [task,      setTask]      = useState(TASK_CATEGORIES[0]);
+  const [task,      setTask]      = useState(TASK_CATEGORIES[1]); // default: Analyze
   const [prompt,    setPrompt]    = useState("");
   const [hookIdx,     setHookIdx]     = useState(0);
   const [hookVisible, setHookVisible] = useState(true);
