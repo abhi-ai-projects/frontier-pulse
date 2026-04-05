@@ -47,24 +47,32 @@ export default function TermsPage() {
 
       {/* Terms content */}
       <div
+        id="policy-content"
         style={{ maxWidth: "860px", margin: "0 auto", padding: "40px 24px 80px" }}
         dangerouslySetInnerHTML={{ __html: TERMS_HTML }}
       />
 
-      {/* Dark mode overrides */}
+      {/* Dark mode overrides — ALL scoped to #policy-content so nav links are never touched,
+           and styles don't bleed into other pages during Next.js client-side navigation */}
       <style dangerouslySetInnerHTML={{ __html: `
-        [data-custom-class='title'], [data-custom-class='title'] * { color: #f5f5f7 !important; }
-        [data-custom-class='subtitle'], [data-custom-class='subtitle'] * { color: #8e8e93 !important; }
-        [data-custom-class='heading_1'], [data-custom-class='heading_1'] * { color: #e5e5e7 !important; }
-        [data-custom-class='heading_2'], [data-custom-class='heading_2'] * { color: #d1d1d6 !important; }
-        [data-custom-class='body_text'], [data-custom-class='body_text'] * { color: #8e8e93 !important; }
-        [data-custom-class='link'], [data-custom-class='link'] * { color: #a78bfa !important; }
-        [data-custom-class='body'] span[style*="color: black"],
-        [data-custom-class='body'] span[style*="color:#000"],
-        [data-custom-class='body'] span[style*="color: #000"] { color: #8e8e93 !important; }
-        strong, b { color: #c7c7cc !important; }
-        hr { border-color: #2a2a2a !important; }
-        a { color: #a78bfa !important; }
+        #policy-content [data-custom-class='title'],
+        #policy-content [data-custom-class='title'] * { color: #f5f5f7 !important; }
+        #policy-content [data-custom-class='subtitle'],
+        #policy-content [data-custom-class='subtitle'] * { color: #8e8e93 !important; }
+        #policy-content [data-custom-class='heading_1'],
+        #policy-content [data-custom-class='heading_1'] * { color: #e5e5e7 !important; }
+        #policy-content [data-custom-class='heading_2'],
+        #policy-content [data-custom-class='heading_2'] * { color: #d1d1d6 !important; }
+        #policy-content [data-custom-class='body_text'],
+        #policy-content [data-custom-class='body_text'] * { color: #8e8e93 !important; }
+        #policy-content [data-custom-class='link'],
+        #policy-content [data-custom-class='link'] * { color: #a78bfa !important; }
+        #policy-content span[style*="color: black"],
+        #policy-content span[style*="color:#000"],
+        #policy-content span[style*="color: #000"] { color: #8e8e93 !important; }
+        #policy-content strong, #policy-content b { color: #c7c7cc !important; }
+        #policy-content hr { border-color: #2a2a2a !important; }
+        #policy-content a { color: #a78bfa !important; }
       `}} />
 
       {/* TLDR modal */}

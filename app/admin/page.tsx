@@ -287,7 +287,33 @@ export default function AdminPage() {
             </p>
           </section>
 
-          <p style={{ fontSize:11, color:"#222", marginTop:40 }}>
+          {/* ── Metric glossary ── */}
+          <section style={{ marginTop:48, marginBottom:24 }}>
+            <SectionHead>Metric reference</SectionHead>
+            <div style={{ background:"#111", border:"1px solid #1e1e1e", borderRadius:12, overflow:"hidden" }}>
+              {[
+                { metric:"Comparisons run (today)",     desc:"Total successful API calls that returned results from all 3 models. Each one fires Claude Sonnet, GPT, and Gemini in parallel, then a Haiku evaluation pass." },
+                { metric:"New browsers (today)",        desc:"Fingerprints seen for the first time today. A fingerprint is a hash of canvas output + screen properties + timezone — one per browser profile. A user on Chrome and Safari counts as 2." },
+                { metric:"Rate limited (today)",        desc:"Requests blocked because the fingerprint (or IP fallback) had already used 10 comparisons in their rolling 24-hour window." },
+                { metric:"Suspicious (today)",          desc:"Requests that arrived without a valid Origin header — most likely curl, Postman, or a script. Blocked at the first check before any rate-limit or model logic runs." },
+                { metric:"All-time comparisons",        desc:"Running total across all users since launch. Persists in KV indefinitely (no expiry). Daily counters above reset at UTC midnight." },
+                { metric:"Average scores (Relevance)",  desc:"Mean of all Haiku-assigned relevance scores (0–100) per model since launch. Relevance = how directly and completely the response addressed the user's specific prompt." },
+                { metric:"Average scores (Faithfulness)",desc:"Mean faithfulness score. Faithfulness = how grounded and verifiable the claims are — deducted for hallucinated facts or unsupported statistics." },
+                { metric:"Average scores (Safety)",     desc:"Mean safety score. Safety = 100 means fully safe and professional. Deducted for toxicity, bias, or content inappropriate for professional use." },
+                { metric:"Avg ms (response time)",      desc:"Mean wall-clock time from API call start to first token received, per model. Includes network latency to the provider. Gemini often includes a thinking-token budget." },
+                { metric:"Model win rates",             desc:"A model 'wins' a metric for a given comparison if its score is strictly higher than both others. Ties are not counted. Win% = wins ÷ total comparisons where at least one model scored." },
+                { metric:"Task split",                  desc:"Write = user selected the 'Write' task context (communication expert). Analyze = 'Analyze' (strategy expert). Decide = 'Decide' (trusted advisor)." },
+                { metric:"Usage by country",            desc:"Derived from the x-vercel-ip-country header injected by Vercel's edge network — approximate, not GPS. Country-level granularity only; no finer location data is stored." },
+              ].map(({ metric, desc }) => (
+                <div key={metric} style={{ display:"grid", gridTemplateColumns:"220px 1fr", gap:16, padding:"12px 18px", borderBottom:"1px solid #1a1a1a", alignItems:"baseline" }}>
+                  <span style={{ fontSize:12, color:"#888", fontWeight:500 }}>{metric}</span>
+                  <span style={{ fontSize:12, color:"#444", lineHeight:1.6 }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <p style={{ fontSize:11, color:"#222", marginTop:16 }}>
             Last fetched: {new Date(s.generatedAt).toLocaleTimeString()} UTC ·{" "}
             <button onClick={() => fetchStats(key)} style={{ background:"none", border:"none", color:"#333", cursor:"pointer", fontSize:11, padding:0 }}>
               Refresh now
