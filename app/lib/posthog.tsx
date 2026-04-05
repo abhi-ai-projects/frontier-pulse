@@ -12,7 +12,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       capture_pageview: true,          // auto page view on load
       capture_pageleave: true,         // track when users leave
       autocapture: false,              // we'll track manually for precision
-      persistence: "localStorage+cookie",
+      persistence: "memory",           // no cookies — avoids GDPR consent requirement
     });
   }, []);
 

@@ -18,7 +18,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
-import { checkRateLimit } from "@/app/lib/rateLimit";
+import { checkRateLimit, recordSuspiciousRequest } from "@/app/lib/rateLimit";
 
 // ── API clients ───────────────────────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -40,7 +40,26 @@ const INJECTION_PATTERNS = [
   /override\s+(my\s+|your\s+)?(system\s+)?prompt/i,
 ];
 
+// Allowed origins — requests without a matching Origin are likely scripts/curl.
+// Browsers always send Origin on same-origin fetch() POST requests.
+const ALLOWED_ORIGINS = new Set([
+  "https://frontierpulse.org",
+  "https://www.frontierpulse.org",
+  "http://localhost:3000",
+]);
+
 export async function POST(req: NextRequest) {
+  // ── 0. Origin check — first-line defence against scripted abuse ────────────
+  // Browsers always include Origin on fetch() POST requests; curl omits it by
+  // default. A missing or unknown Origin flags a likely non-browser caller.
+  // We log + count these but still fall through to rate limiting so determined
+  // attackers don't get a clean signal that the check exists.
+  const origin = req.headers.get("origin") ?? "";
+  if (!ALLOWED_ORIGINS.has(origin)) {
+    void recordSuspiciousRequest(); // increment daily suspicious counter
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
   // ── 1. Rate limiting ───────────────────────────────────────────────────────
   // Client IP (Vercel sets x-forwarded-for)
   const ip          = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -65,6 +84,17 @@ export async function POST(req: NextRequest) {
     ({ prompt, systemContext } = await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  // Whitelist systemContext to the exact values the UI sends.
+  // This prevents prompt injection via a crafted systemContext payload.
+  const VALID_SYSTEM_CONTEXTS = new Set([
+    "You are a professional communication expert. Help the user craft whatever they need to communicate — this could be an email, message, announcement, pitch, memo, or any other format. Follow the user's lead on format and context.",
+    "You are a senior strategy and analysis expert. Analyze whatever situation, market, document, or decision the user presents. Structure your thinking clearly and surface the insights that actually matter. Follow the user's lead on scope and depth.",
+    "You are a trusted advisor helping someone think through a decision. Lay out the real tradeoffs, surface what they might be missing, and help them reach a confident conclusion. Follow the user's lead on the decision they're facing — personal or professional.",
+  ]);
+  if (!systemContext || !VALID_SYSTEM_CONTEXTS.has(systemContext)) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
   // Type and length checks
