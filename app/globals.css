@@ -230,6 +230,14 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; }
   .analyze-back-mobile { display: flex; }
 }
 
+/* Compare section nav — icon buttons in header (desktop), labeled row below CTA (mobile) */
+.compare-nav-desktop { display: flex; }
+.compare-nav-mobile  { display: none;  }
+@media (max-width: 768px) {
+  .compare-nav-desktop { display: none !important; }
+  .compare-nav-mobile  { display: flex;             }
+}
+
 @media (max-width: 768px) {
   .side-nav-desktop    { display: none !important; }
   .main-content        { margin-left: 0; padding-bottom: 60px; }

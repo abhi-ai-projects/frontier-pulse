@@ -878,10 +878,10 @@ export default function Home() {
                   SECTION 2 — LIVE COMPARISON
               ════════════════════════════════════ */}
               <div className={`section-transition ${section === "compare" ? "section-visible" : "section-hidden"}`}>
-                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
                   {sectionHeader("Live Comparison", prompt.length > 90 ? `"${prompt.slice(0, 90)}…"` : `"${prompt}"`)}
-                  {/* Two navigation icon buttons */}
-                  <div style={{ display:"flex", gap:8, paddingTop:40 }}>
+                  {/* Icon buttons — desktop only; mobile gets labeled buttons below the CTA */}
+                  <div className="compare-nav-desktop" style={{ gap:8, paddingTop:40, flexShrink:0 }}>
                     {iconBtn("↵", "Current Prompt", () => goToSection("prompt"))}
                     {iconBtn("+", "New Prompt", newPrompt)}
                   </div>
@@ -977,6 +977,27 @@ export default function Home() {
                     </button>
                   </div>
                 )}
+
+                {/* Mobile-only prompt nav — two labeled buttons below the CTA so the
+                    header never wraps regardless of prompt length */}
+                <div className="compare-nav-mobile" style={{ marginTop:16, gap:10 }}>
+                  <button onClick={() => goToSection("prompt")}
+                    style={{ flex:1, padding:"10px 0", fontSize:13, fontWeight:600, fontFamily:"'Sora',sans-serif",
+                             color:"#a1a1a6", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)",
+                             borderRadius:10, cursor:"pointer", transition:"all 0.15s ease", letterSpacing:"0.01em" }}
+                    onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.2)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color="#a1a1a6"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+                    ↵ Current Prompt
+                  </button>
+                  <button onClick={newPrompt}
+                    style={{ flex:1, padding:"10px 0", fontSize:13, fontWeight:600, fontFamily:"'Sora',sans-serif",
+                             color:"#a1a1a6", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)",
+                             borderRadius:10, cursor:"pointer", transition:"all 0.15s ease", letterSpacing:"0.01em" }}
+                    onMouseEnter={e => { e.currentTarget.style.color="#f5f5f7"; e.currentTarget.style.borderColor="rgba(255,255,255,0.2)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color="#a1a1a6"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+                    + New Prompt
+                  </button>
+                </div>
               </div>
 
               {/* ════════════════════════════════════
@@ -1248,7 +1269,7 @@ export default function Home() {
 
             {/* Fingerprinting note */}
             <p style={{ marginTop:12, fontSize:11, fontFamily:"'Figtree',sans-serif", color:"#6e6e73", lineHeight:1.6 }}>
-              Limit is tracked by IP address. Incognito windows and different browsers on the same network share the same daily quota.
+              Usage is tracked per device across browsers — switching to incognito or a different browser on the same device won&apos;t reset your count.
             </p>
             </div>{/* end scrollable content */}
           </div>
