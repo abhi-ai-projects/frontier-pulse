@@ -21,22 +21,25 @@ type Insights = {
 
 const TASK_CATEGORIES = [
   {
-    id: "write",
-    label: "Write",
-    hint: "Models are tuned as a communication expert — adapts to any format you need",
-    placeholder: "What do you need to write, and for whom? E.g. 'Reply to a client whose project is 3 weeks delayed' or 'Pitch moving our team to the Claude API'",
-    systemContext: "You are a professional communication expert. Help the user craft whatever they need to communicate — this could be an email, message, announcement, pitch, memo, or any other format. Follow the user's lead on format and context.",
-  },
-  {
     id: "analyze",
     label: "Analyze",
+    sub: "Strategy & insights",
     hint: "Models are tuned as a strategy analyst — structured thinking, actionable insights",
     placeholder: "What do you want to understand or break down? E.g. 'Compare Anthropic vs OpenAI for enterprise' or 'Assess HIPAA risks of adopting a third-party LLM API'",
     systemContext: "You are a senior strategy and analysis expert. Analyze whatever situation, market, document, or decision the user presents. Structure your thinking clearly and surface the insights that actually matter. Follow the user's lead on scope and depth.",
   },
   {
+    id: "write",
+    label: "Write",
+    sub: "Drafts & comms",
+    hint: "Models are tuned as a communication expert — adapts to any format you need",
+    placeholder: "What do you need to write, and for whom? E.g. 'Reply to a client whose project is 3 weeks delayed' or 'Pitch moving our team to the Claude API'",
+    systemContext: "You are a professional communication expert. Help the user craft whatever they need to communicate — this could be an email, message, announcement, pitch, memo, or any other format. Follow the user's lead on format and context.",
+  },
+  {
     id: "decide",
     label: "Decide",
+    sub: "Weigh tradeoffs",
     hint: "Models are tuned as a trusted advisor — lays out tradeoffs, helps you land a conclusion",
     placeholder: "What are you weighing up? E.g. 'Should we standardize on one AI model?' or 'Two job offers — help me think through the tradeoffs'",
     systemContext: "You are a trusted advisor helping someone think through a decision. Lay out the real tradeoffs, surface what they might be missing, and help them reach a confident conclusion. Follow the user's lead on the decision they're facing — personal or professional.",
@@ -46,7 +49,7 @@ const TASK_CATEGORIES = [
 // ─── Rotating hook lines (hero subtitle) ─────────────────────────────────────
 const HOOK_LINES = [
   "Enter any prompt — see three frontier models respond in real time.",
-  "Write a message  ·  Analyze a situation  ·  Decide between options",
+  "Your prompt goes directly to the models — never stored, never logged.",
   "Explore timing, scores, and an honest verdict in the Analyze tab.",
 ];
 
@@ -228,7 +231,7 @@ function estReadTime(outputTokens: number): string {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const [section,   setSection]   = useState<Section>("prompt");
-  const [task,      setTask]      = useState(TASK_CATEGORIES[1]); // default: Analyze
+  const [task,      setTask]      = useState(TASK_CATEGORIES[0]); // default: Analyze (index 0)
   const [prompt,    setPrompt]    = useState("");
   const [hookIdx,     setHookIdx]     = useState(0);
   const [hookVisible, setHookVisible] = useState(true);
@@ -751,7 +754,8 @@ export default function Home() {
                       className={`task-chip${task.id === t.id ? " active" : ""}${submitted ? " locked" : ""}`}
                       onClick={() => { if (!submitted) { setTask(t); setPrompt(""); resetComparison(); } }}
                       style={{ cursor: submitted ? "default" : "pointer" }}>
-                      {t.label}
+                      <span className="task-chip-label">{t.label}</span>
+                      <span className="task-chip-sub">{t.sub}</span>
                     </button>
                   ))}
                 </div>
