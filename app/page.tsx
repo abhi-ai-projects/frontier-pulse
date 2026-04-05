@@ -49,7 +49,7 @@ const TASK_CATEGORIES = [
 // ─── Rotating hook lines (hero subtitle) ─────────────────────────────────────
 const HOOK_LINES = [
   "Enter any prompt — see three frontier models respond in real time.",
-  "Your prompt goes directly to the models — never stored, never logged.",
+  "Your prompt goes directly to the models — never stored by us.",
   "Explore timing, scores, and an honest verdict in the Analyze tab.",
 ];
 

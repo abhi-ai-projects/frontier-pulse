@@ -120,7 +120,7 @@ export default function PrivacyPage() {
               {[
                 {
                   icon: "🔒",
-                  text: "Your prompts are never stored, logged, or used for training. We don't collect your name, email, or any personally identifiable information.",
+                  text: "Your prompt is never stored by us — it goes directly to Anthropic, OpenAI, and Google's APIs simultaneously so all three models can respond. Each provider's own privacy policy governs how they handle it. We don't collect your name, email, or any personally identifiable information.",
                 },
                 {
                   icon: "🛡️",
