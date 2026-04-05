@@ -31,12 +31,12 @@ export default function TermsPage() {
           textDecoration: "none",
           color: "#e5e5e7",
         }}>
-          <svg width="28" height="20" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="32" height="24" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="4"  cy="9" r="4" fill="#ff9f6b"/>
             <circle cx="14" cy="9" r="4" fill="#63d68d"/>
             <circle cx="24" cy="9" r="4" fill="#6ab4f5"/>
           </svg>
-          <span style={{ fontSize: "16px", fontWeight: 700, fontFamily: "Arial, sans-serif" }}>Frontier Pulse</span>
+          <span style={{ fontSize: "22px", fontWeight: 700, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.03em" }}>Frontier Pulse</span>
         </Link>
         <Link href="/" style={{
           fontSize: "13px",
