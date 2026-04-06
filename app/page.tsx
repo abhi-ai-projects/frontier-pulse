@@ -50,7 +50,7 @@ const TASK_CATEGORIES = [
 const HOOK_LINES = [
   "Enter any prompt — see three frontier models respond in real time.",
   "Your prompt goes directly to the models — never stored by us.",
-  "Explore timing, scores, and an honest verdict in the Analyze tab.",
+  "Explore timing, scores, and an honest verdict in the Insights tab.",
 ];
 
 // ─── "How it works" step definitions ─────────────────────────────────────────
@@ -82,8 +82,8 @@ const HOW_IT_WORKS_STEPS = [
     color: "#ff9f6b",
   },
   {
-    title: "Results in Compare & Analyze",
-    desc: "Compare shows responses side by side. Analyze breaks down timing, token usage, eval scores, approach descriptors, and an honest verdict on which model suited your prompt best.",
+    title: "Results in Compare & Insights",
+    desc: "Compare shows responses side by side. Insights breaks down timing, token usage, eval scores, approach descriptors, and an honest verdict on which model suited your prompt best.",
     color: "#a78bfa",
   },
 ];
@@ -98,7 +98,7 @@ const MODELS = [
 const NAV_ITEMS: { id: Section; label: string }[] = [
   { id: "prompt",   label: "PROMPT"  },
   { id: "compare",  label: "COMPARE" },
-  { id: "analysis", label: "ANALYZE" },
+  { id: "analysis", label: "INSIGHTS" },
 ];
 
 // ─── Attempt tracking (daily, resets at midnight UTC) ────────────────────────
@@ -199,7 +199,7 @@ function buildFingerprint(): string {
 }
 // ─── Text utilities ───────────────────────────────────────────────────────────
 // stripMarkdown: used for clipboard copy so plain text doesn't include syntax.
-// estReadTime:   rough human-readable reading estimate shown in the Analyze tab.
+// estReadTime:   rough human-readable reading estimate shown in the Insights tab.
 function stripMarkdown(t: string) {
   return t.replace(/#{1,6}\s+/g,"").replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1")
     .replace(/^[-*]\s+/gm,"• ").replace(/^(\d+)\.\s+/gm,"$1. ")
@@ -982,7 +982,7 @@ export default function Home() {
                       style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:980, padding:"11px 32px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Sora',sans-serif", color:"#f5f5f7", letterSpacing:"0.01em", transition:"all 0.1s ease" }}
                       onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
-                      View Model Response Metrics &amp; Analysis →
+                      View Model Response Metrics &amp; Insights →
                     </button>
                   </div>
                 )}
@@ -1014,7 +1014,7 @@ export default function Home() {
               ════════════════════════════════════ */}
               <div className={`section-transition ${section === "analysis" ? "section-visible" : "section-hidden"}`}>
                 <div style={{ position:"relative" }}>
-                  {sectionHeader("Model Response Metrics & Analysis", "Telemetry and honest model review — generated from this specific comparison")}
+                  {sectionHeader("Model Response Metrics & Insights", "Telemetry and honest model review — generated from this specific comparison")}
                   <div style={{ position:"absolute", top:44, right:0 }}>
                     {iconBtn("↵", "Back to responses", () => goToSection("compare"))}
                   </div>
