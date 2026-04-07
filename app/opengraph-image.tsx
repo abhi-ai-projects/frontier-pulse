@@ -6,12 +6,6 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OGImage() {
-  // Fetch Sora font bytes — ImageResponse can't use CSS font links
-  const fontRes = await fetch(
-    "https://fonts.gstatic.com/s/sora/v12/xMQOuFFYT72X5wkB_18qmnndmSdSn3-KIwNhBti0.woff2"
-  );
-  const fontData = await fontRes.arrayBuffer();
-
   return new ImageResponse(
     (
       <div
@@ -24,6 +18,7 @@ export default async function OGImage() {
           padding: "0 100px",
           position: "relative",
           overflow: "hidden",
+          fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
         {/* Subtle glow behind the dots */}
@@ -65,32 +60,28 @@ export default async function OGImage() {
                 color: "#f5f5f7",
                 letterSpacing: "-2px",
                 lineHeight: 1,
-                fontFamily: "Sora",
               }}
             >
               Frontier Pulse
             </span>
           </div>
 
-          {/* Tagline line 1 */}
+          {/* Tagline */}
           <div
             style={{
-              fontSize: 26,
-              fontWeight: 400,
-              color: "#6e6e73",
-              lineHeight: 1.5,
-              maxWidth: 540,
-              marginBottom: 44,
-              fontFamily: "Sora",
               display: "flex",
               flexDirection: "column",
               gap: 4,
+              marginBottom: 44,
             }}
           >
-            <span>One prompt.{" "}
+            <span style={{ fontSize: 26, fontWeight: 400, color: "#6e6e73", lineHeight: 1.5 }}>
+              One prompt.{" "}
               <span style={{ color: "#a1a1a6", fontWeight: 600 }}>Three frontier models.</span>
             </span>
-            <span>See who says what — and how they differ.</span>
+            <span style={{ fontSize: 26, fontWeight: 400, color: "#6e6e73", lineHeight: 1.5 }}>
+              See who says what — and how they differ.
+            </span>
           </div>
 
           {/* URL */}
@@ -100,7 +91,6 @@ export default async function OGImage() {
               fontWeight: 600,
               color: "#3a3a3c",
               letterSpacing: "0.5px",
-              fontFamily: "Sora",
             }}
           >
             frontierpulse.org
@@ -141,14 +131,6 @@ export default async function OGImage() {
     ),
     {
       ...size,
-      fonts: [
-        {
-          name: "Sora",
-          data: fontData,
-          weight: 700,
-          style: "normal",
-        },
-      ],
     },
   );
 }
