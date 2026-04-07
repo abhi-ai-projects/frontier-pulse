@@ -238,9 +238,47 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; }
   .compare-nav-mobile  { display: flex;             }
 }
 
+/* Mobile sticky bottom nav — Compare / Insights tabs pinned when results are visible */
+.mobile-sticky-nav {
+  display: none;
+}
+@media (max-width: 768px) {
+  .mobile-sticky-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    gap: 8px;
+    padding: 10px 16px 28px; /* 28px bottom = safe-area buffer for home indicator */
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+}
+.sticky-nav-btn {
+  flex: 1;
+  padding: 11px 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #a1a1a6;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sticky-nav-btn.active {
+  background: var(--white);
+  border-color: var(--white);
+  color: var(--black);
+}
+
 @media (max-width: 768px) {
   .side-nav-desktop    { display: none !important; }
-  .main-content        { margin-left: 0; padding-bottom: 60px; }
+  .main-content        { margin-left: 0; padding-bottom: 100px; }
   .keyboard-hint       { display: none; }
   .top-nav             { padding: 10px 16px !important; }
   .nav-how-text        { display: none; }

@@ -982,7 +982,7 @@ export default function Home() {
                       style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:980, padding:"11px 32px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Sora',sans-serif", color:"#f5f5f7", letterSpacing:"0.01em", transition:"all 0.1s ease" }}
                       onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
-                      View Model Response Metrics &amp; Insights →
+                      View Comparison Insights →
                     </button>
                   </div>
                 )}
@@ -1014,7 +1014,7 @@ export default function Home() {
               ════════════════════════════════════ */}
               <div className={`section-transition ${section === "analysis" ? "section-visible" : "section-hidden"}`}>
                 <div style={{ position:"relative" }}>
-                  {sectionHeader("Model Response Metrics & Insights", "Telemetry and honest model review — generated from this specific comparison")}
+                  {sectionHeader("Comparison Metrics & Insights", "Telemetry and honest model review for your comparison")}
                   <div style={{ position:"absolute", top:44, right:0 }}>
                     {iconBtn("↵", "Back to responses", () => goToSection("compare"))}
                   </div>
@@ -1209,6 +1209,22 @@ export default function Home() {
         </footer>
 
       </main>
+
+      {/* ── Mobile sticky bottom nav — pinned when results are visible ── */}
+      {hasRes && !loading && section !== "prompt" && (
+        <div className="mobile-sticky-nav">
+          <button
+            className={section === "compare" ? "sticky-nav-btn active" : "sticky-nav-btn"}
+            onClick={() => goToSection("compare")}>
+            Compare
+          </button>
+          <button
+            className={section === "analysis" ? "sticky-nav-btn active" : "sticky-nav-btn"}
+            onClick={() => goToSection("analysis")}>
+            Insights
+          </button>
+        </div>
+      )}
 
       {/* ── Safety violation modal — blocking, no dismiss, single refresh button ── */}
       {safetyViolation && (
