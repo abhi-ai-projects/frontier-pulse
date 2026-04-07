@@ -270,6 +270,7 @@ export default function Home() {
   const newPrompt = () => {
     resetComparison();
     setPrompt("");
+    window.history.replaceState(null, "", window.location.pathname); // clear ?prompt= from URL
     goToSection("prompt");
   };
 
@@ -354,6 +355,13 @@ export default function Home() {
       .catch(() => {}); // fail silently — localStorage remains the fallback
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Pre-fill prompt from URL query string ──────────────────────────────────
+  // Lets users share/bookmark frontierpulse.org/?prompt=... and restores on refresh.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("prompt");
+    if (p) setPrompt(decodeURIComponent(p));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Core comparison handler ────────────────────────────────────────────────
   // Fires after the user clicks Compare. Runs client-side gate first (fast),
   // then sends prompt + systemContext to POST /api/compare which calls all 3
@@ -367,6 +375,8 @@ export default function Home() {
       return;
     }
     trackPromptSubmitted(prompt, task.id);
+    // Push prompt into URL so refresh/back restores it and it's shareable
+    window.history.replaceState(null, "", `?prompt=${encodeURIComponent(prompt.trim())}`);
     setLoading(true);
     resetComparison();
     goToSection("compare");
