@@ -6,6 +6,12 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OGImage() {
+  // Fetch Sora font bytes — ImageResponse can't use CSS font links
+  const fontRes = await fetch(
+    "https://fonts.gstatic.com/s/sora/v12/xMQOuFFYT72X5wkB_18qmnndmSdSn3-KIwNhBti0.woff2"
+  );
+  const fontData = await fontRes.arrayBuffer();
+
   return new ImageResponse(
     (
       <div
@@ -15,34 +21,23 @@ export default async function OGImage() {
           background: "#0a0a0a",
           display: "flex",
           alignItems: "center",
-          padding: "0 96px",
+          padding: "0 100px",
           position: "relative",
           overflow: "hidden",
-          fontFamily: "sans-serif",
         }}
       >
-        {/* Dot grid texture */}
+        {/* Subtle glow behind the dots */}
         <div
           style={{
             position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)",
-            backgroundSize: "36px 36px",
-          }}
-        />
-
-        {/* Glow behind dots */}
-        <div
-          style={{
-            position: "absolute",
-            right: 100,
+            right: 80,
             top: "50%",
-            width: 420,
-            height: 420,
+            width: 460,
+            height: 460,
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(255,159,107,0.08) 0%, rgba(99,214,141,0.05) 40%, rgba(106,180,245,0.04) 70%, transparent 100%)",
+              "radial-gradient(circle, rgba(99,214,141,0.06) 0%, rgba(106,180,245,0.04) 50%, transparent 80%)",
+            display: "flex",
             transform: "translateY(-50%)",
           }}
         />
@@ -57,53 +52,55 @@ export default async function OGImage() {
           }}
         >
           {/* Logo row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 28 }}>
-            {/* Three dots SVG */}
-            <svg width="44" height="30" viewBox="0 0 28 18" fill="none">
+          <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 32 }}>
+            <svg width="48" height="32" viewBox="0 0 28 18" fill="none">
               <circle cx="4"  cy="9" r="4" fill="#ff9f6b" />
               <circle cx="14" cy="9" r="4" fill="#63d68d" />
               <circle cx="24" cy="9" r="4" fill="#6ab4f5" />
             </svg>
             <span
               style={{
-                fontSize: 58,
+                fontSize: 60,
                 fontWeight: 700,
                 color: "#f5f5f7",
-                letterSpacing: "-0.03em",
+                letterSpacing: "-2px",
                 lineHeight: 1,
+                fontFamily: "Sora",
               }}
             >
               Frontier Pulse
             </span>
           </div>
 
-          {/* Tagline */}
-          <p
+          {/* Tagline line 1 */}
+          <div
             style={{
-              fontSize: 24,
+              fontSize: 26,
               fontWeight: 400,
               color: "#6e6e73",
-              letterSpacing: "-0.01em",
-              lineHeight: 1.4,
-              maxWidth: 520,
-              marginBottom: 40,
-              margin: "0 0 40px 0",
+              lineHeight: 1.5,
+              maxWidth: 540,
+              marginBottom: 44,
+              fontFamily: "Sora",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
             }}
           >
-            One prompt.{" "}
-            <span style={{ color: "#a1a1a6", fontWeight: 600 }}>
-              Three frontier models.
-            </span>{" "}
-            See exactly who says what — and how they differ.
-          </p>
+            <span>One prompt.{" "}
+              <span style={{ color: "#a1a1a6", fontWeight: 600 }}>Three frontier models.</span>
+            </span>
+            <span>See who says what — and how they differ.</span>
+          </div>
 
           {/* URL */}
           <span
             style={{
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: 600,
               color: "#3a3a3c",
-              letterSpacing: "0.02em",
+              letterSpacing: "0.5px",
+              fontFamily: "Sora",
             }}
           >
             frontierpulse.org
@@ -114,47 +111,44 @@ export default async function OGImage() {
         <div
           style={{
             position: "absolute",
-            right: 112,
+            right: 108,
             top: "50%",
             display: "flex",
-            gap: 22,
+            gap: 20,
             alignItems: "center",
             zIndex: 1,
             transform: "translateY(-50%)",
           }}
         >
-          {[
-            { color: "#ff9f6b", shadow: "rgba(255,159,107,0.4)" },
-            { color: "#63d68d", shadow: "rgba(99,214,141,0.4)" },
-            { color: "#6ab4f5", shadow: "rgba(106,180,245,0.4)" },
-          ].map(({ color, shadow }) => (
-            <div
-              key={color}
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                background: color,
-                boxShadow: `0 0 48px ${shadow}`,
-              }}
-            />
-          ))}
+          <div style={{ width: 76, height: 76, borderRadius: "50%", background: "#ff9f6b", boxShadow: "0 0 52px rgba(255,159,107,0.45)", display: "flex" }} />
+          <div style={{ width: 76, height: 76, borderRadius: "50%", background: "#63d68d", boxShadow: "0 0 52px rgba(99,214,141,0.45)", display: "flex" }} />
+          <div style={{ width: 76, height: 76, borderRadius: "50%", background: "#6ab4f5", boxShadow: "0 0 52px rgba(106,180,245,0.45)", display: "flex" }} />
         </div>
 
-        {/* Bottom gradient accent line */}
+        {/* Bottom accent line */}
         <div
           style={{
             position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
-            height: 2,
+            height: 3,
             background: "linear-gradient(to right, #ff9f6b, #63d68d, #6ab4f5)",
-            opacity: 0.5,
+            display: "flex",
           }}
         />
       </div>
     ),
-    { ...size },
+    {
+      ...size,
+      fonts: [
+        {
+          name: "Sora",
+          data: fontData,
+          weight: 700,
+          style: "normal",
+        },
+      ],
+    },
   );
 }
