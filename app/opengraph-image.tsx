@@ -75,11 +75,11 @@ export default async function OGImage() {
               marginBottom: 44,
             }}
           >
-            <span style={{ fontSize: 26, fontWeight: 400, color: "#a1a1a6", lineHeight: 1.5 }}>
+            <span style={{ fontSize: 28, fontWeight: 400, color: "#c8c8cc", lineHeight: 1.5 }}>
               One prompt.{" "}
-              <span style={{ color: "#e5e5e7", fontWeight: 600 }}>Three frontier models.</span>
+              <span style={{ color: "#ffffff", fontWeight: 700 }}>Three frontier models.</span>
             </span>
-            <span style={{ fontSize: 26, fontWeight: 400, color: "#a1a1a6", lineHeight: 1.5 }}>
+            <span style={{ fontSize: 28, fontWeight: 400, color: "#c8c8cc", lineHeight: 1.5 }}>
               See who says what — and how they differ.
             </span>
           </div>
@@ -89,7 +89,7 @@ export default async function OGImage() {
             style={{
               fontSize: 18,
               fontWeight: 600,
-              color: "#6e6e73",
+              color: "#8e8e93",
               letterSpacing: "0.5px",
             }}
           >
