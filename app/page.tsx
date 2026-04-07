@@ -883,6 +883,11 @@ export default function Home() {
                         </button>
                       )}
                     </div>
+                    {!submitted && (
+                      <p style={{ margin:"8px 0 0", fontSize:11, color:"#4a4a4e", fontFamily:"'Sora',sans-serif", lineHeight:1.4 }}>
+                        Responses reflect each model&apos;s training data — recent or real-time events may not be accurate.
+                      </p>
+                    )}
                   </div>
                 </div>
 
