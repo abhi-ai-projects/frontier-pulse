@@ -888,8 +888,8 @@ export default function Home() {
 
                 {error && <p style={{ fontSize:13, color:"#ff6b6b", marginBottom:16 }}>{error}</p>}
                 {/* Disclaimer — brighter */}
-                <p style={{ fontSize:11, color:"#8e8e93", marginBottom:40, fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em" }}>
-                  Sent to Anthropic, OpenAI &amp; Google APIs. Do not include personal or confidential information. Responses reflect training data, not live search — recent events up to 12+ months ago may be missing.
+                <p style={{ fontSize:11, color:"#8e8e93", marginBottom:40, fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em", lineHeight:1.6 }}>
+                  Sent to Anthropic, OpenAI &amp; Google APIs — do not include personal or confidential information.<br/>Responses reflect training data, not live search — recent events may be missing.
                 </p>
               </div>
 
