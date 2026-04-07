@@ -1203,7 +1203,7 @@ export default function Home() {
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color="#a1a1a6"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color="#6e6e73"; }}
             >
-              Contact
+              Provide Feedback
             </a>
           </div>
         </footer>

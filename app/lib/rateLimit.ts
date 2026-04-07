@@ -8,9 +8,9 @@
  *     Each unique browser gets its own independent quota. Colleagues on shared
  *     office WiFi each get their own 10; they don't share a pool.
  *
- *   • Secondary limit — per IP: IP_DAILY_LIMIT (50) comparisons.
+ *   • Secondary limit — per IP: IP_DAILY_LIMIT (25) comparisons.
  *     A backstop that only fires against scripted abuse from a single network.
- *     Not intended to affect real users (50 colleagues in one office is
+ *     Not intended to affect real users (25 colleagues in one office is
  *     already unlikely; scripts hitting in a tight loop would hit this fast).
  *
  *   • When no fingerprint is sent (rare), IP is used as the sole signal and
@@ -38,7 +38,7 @@
 import { createHash } from "crypto";
 
 export const DAILY_LIMIT    = 10;   // per browser fingerprint — the user-facing quota
-const IP_DAILY_LIMIT        = 50;   // per IP — bot/abuse backstop only
+const IP_DAILY_LIMIT        = 25;   // per IP — bot/abuse backstop only
 const WINDOW_MS             = 24 * 60 * 60 * 1000; // 24 h in ms
 const TTL_SECONDS           = 90_000;               // 25 h — lets keys expire naturally
 
