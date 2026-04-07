@@ -1210,22 +1210,6 @@ export default function Home() {
 
       </main>
 
-      {/* ── Mobile sticky bottom nav — pinned when results are visible ── */}
-      {hasRes && !loading && section !== "prompt" && (
-        <div className="mobile-sticky-nav">
-          <button
-            className={section === "compare" ? "sticky-nav-btn active" : "sticky-nav-btn"}
-            onClick={() => goToSection("compare")}>
-            Compare
-          </button>
-          <button
-            className={section === "analysis" ? "sticky-nav-btn active" : "sticky-nav-btn"}
-            onClick={() => goToSection("analysis")}>
-            Insights
-          </button>
-        </div>
-      )}
-
       {/* ── Safety violation modal — blocking, no dismiss, single refresh button ── */}
       {safetyViolation && (
         <div
