@@ -883,18 +883,13 @@ export default function Home() {
                         </button>
                       )}
                     </div>
-                    {!submitted && (
-                      <p style={{ margin:"8px 0 0", fontSize:11, color:"#4a4a4e", fontFamily:"'Sora',sans-serif", lineHeight:1.4 }}>
-                        Responses reflect each model&apos;s training data — recent or real-time events may not be accurate.
-                      </p>
-                    )}
                   </div>
                 </div>
 
                 {error && <p style={{ fontSize:13, color:"#ff6b6b", marginBottom:16 }}>{error}</p>}
                 {/* Disclaimer — brighter */}
                 <p style={{ fontSize:11, color:"#8e8e93", marginBottom:40, fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em" }}>
-                  Sent to Anthropic, OpenAI &amp; Google APIs. Do not include personal or confidential information.
+                  Sent to Anthropic, OpenAI &amp; Google APIs. Do not include personal or confidential information. Responses reflect training data, not live search — recent events up to 12+ months ago may be missing.
                 </p>
               </div>
 
