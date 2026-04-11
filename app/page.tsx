@@ -53,6 +53,24 @@ const HOOK_LINES = [
   "Explore timing, scores, and an honest verdict in the Insights tab.",
 ];
 
+// ─── Client-side search heuristic ────────────────────────────────────────────
+// Mirrors the server-side SEARCH_TRIGGER_PATTERNS in route.ts so the loading
+// banner can show the right message before the server responds. Does NOT need
+// to be 100% accurate — it's only for UI feedback, the server is authoritative.
+const CLIENT_SEARCH_PATTERNS: RegExp[] = [
+  /\b(latest|recent|newest|current|right now|just announced|just released|just happened)\b/i,
+  /\b(today|tonight|yesterday|this week|this month|this year)\b/i,
+  /\b(news|breaking|update|updates|announcement|announced|released|launched|published)\b/i,
+  /\b(2024|2025|2026)\b/,
+  /\b(stock price|share price|market cap|valuation|funding round|IPO|acquisition|merger)\b/i,
+  /\b(who is (the )?(current|new)|who (won|leads|runs|heads|is leading|is running))\b/i,
+];
+
+/** True when the prompt likely triggers a web search on the server. */
+function promptNeedsSearch(p: string): boolean {
+  return CLIENT_SEARCH_PATTERNS.some(pat => pat.test(p));
+}
+
 // ─── "How it works" step definitions ─────────────────────────────────────────
 // Defined outside the component so the array isn't re-created on every render.
 const HOW_IT_WORKS_STEPS = [
@@ -67,8 +85,8 @@ const HOW_IT_WORKS_STEPS = [
     color: "#f5a623",
   },
   {
-    title: "Sent to 3 models simultaneously",
-    desc: "Your prompt reaches Anthropic, OpenAI, and Google's APIs at the exact same moment — not sequentially. The timing differences you see are real.",
+    title: "Web search + 3 models in parallel",
+    desc: "For time-sensitive queries, a web search runs first to pull fresh context. Then your prompt — plus the same search context — reaches Anthropic, OpenAI, and Google's APIs simultaneously. Every model starts from the same baseline so the comparison stays fair.",
     color: "#6ab4f5",
   },
   {
@@ -251,6 +269,12 @@ export default function Home() {
   // Track per-card scroll-to-bottom to hide fade gradient when fully scrolled
   const [atBottom,      setAtBottom]      = useState<Record<string, boolean>>({});
 
+  // Web search augmentation state — set from API response once comparison completes.
+  // searchUsed     → context was fetched and injected into all three model prompts.
+  // searchFallback → search was triggered but Tavily was unavailable; models ran without it.
+  const [searchUsed,     setSearchUsed]     = useState(false);
+  const [searchFallback, setSearchFallback] = useState(false);
+
   const hasRes    = Object.keys(responses).length > 0;
   const submitted = hasRes || loading; // prompt is locked after Compare is hit
 
@@ -259,6 +283,7 @@ export default function Home() {
 
   const resetComparison = () => {
     setResponses({}); setInsights(null); setTiming({}); setUsage({}); setError(""); setAtBottom({});
+    setSearchUsed(false); setSearchFallback(false);
   };
 
   const goToSection = (s: Section) => {
@@ -423,6 +448,9 @@ export default function Home() {
       setInsights(data.insights  || null);
       setTiming(data.timing      || {});
       setUsage(data.usage        || {});
+      // Sync search state from server — drives the badge shown on the Compare tab
+      setSearchUsed(data.searchUsed       ?? false);
+      setSearchFallback(data.searchFallback ?? false);
       // Analytics: fire after all state is set so timing data is available.
       // bestOf computes the winning model for each eval dimension from numeric scores
       // since the API returns per-model numerics, not a pre-computed winner field.
@@ -887,9 +915,13 @@ export default function Home() {
                 </div>
 
                 {error && <p style={{ fontSize:13, color:"#ff6b6b", marginBottom:16 }}>{error}</p>}
-                {/* Disclaimer — brighter */}
+                {/* Disclaimer — second sentence updates when prompt looks time-sensitive */}
                 <p style={{ fontSize:11, color:"#8e8e93", marginBottom:40, fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em", lineHeight:1.6 }}>
-                  Sent to Anthropic, OpenAI &amp; Google APIs — do not include personal or confidential information.<br/>Responses reflect training data, not live search — recent events may be missing.
+                  Sent to Anthropic, OpenAI &amp; Google APIs — do not include personal or confidential information.<br/>
+                  {promptNeedsSearch(prompt)
+                    ? "Web search enabled — current context will be fetched and shared with all three models."
+                    : "Responses reflect training data — recent events may be missing."
+                  }
                 </p>
               </div>
 
@@ -906,16 +938,57 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Loading status banner */}
+                {/* Loading status banner — two-phase when web search is expected */}
                 {loading && (
-                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20, padding:"12px 18px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:12 }}>
-                    <div style={{ display:"flex", gap:5 }}>
-                      {[0,1,2].map(j => (
-                        <div key={j} style={{ width:6, height:6, borderRadius:"50%", background:"#f5f5f7", opacity:0.5, animation:"dotBlink 1.2s ease infinite", animationDelay:`${j * 0.2}s` }} />
-                      ))}
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:20, padding:"14px 18px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:12 }}>
+
+                    {/* Phase 1: web search row — only shown for time-sensitive prompts */}
+                    {promptNeedsSearch(prompt) && (
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <div style={{ display:"flex", gap:4 }}>
+                          {[0,1,2].map(j => (
+                            <div key={j} style={{ width:5, height:5, borderRadius:"50%", background:"#6ab4f5", animation:"dotBlink 1.2s ease infinite", animationDelay:`${j * 0.2}s` }} />
+                          ))}
+                        </div>
+                        <span style={{ fontSize:12, color:"#6ab4f5", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em" }}>
+                          🔍 Fetching current web context
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Phase 2: models row — always shown */}
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ display:"flex", gap:5 }}>
+                        {[0,1,2].map(j => (
+                          <div key={j} style={{ width:6, height:6, borderRadius:"50%", background:"#f5f5f7", opacity:0.5, animation:"dotBlink 1.2s ease infinite", animationDelay:`${j * 0.2 + (promptNeedsSearch(prompt) ? 0.4 : 0)}s` }} />
+                        ))}
+                      </div>
+                      <span style={{ fontSize:12, color:"#8e8e93", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em" }}>
+                        {promptNeedsSearch(prompt)
+                          ? "then querying 3 models in parallel — 10–17 seconds total"
+                          : "Querying 3 models in parallel — this takes 8–15 seconds"
+                        }
+                      </span>
                     </div>
-                    <span style={{ fontSize:12, color:"#8e8e93", fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em" }}>
-                      Querying 3 models in parallel — this takes 8–15 seconds
+
+                  </div>
+                )}
+
+                {/* Web-augmented / search-fallback badge — shown after results arrive */}
+                {hasRes && (searchUsed || searchFallback) && (
+                  <div style={{
+                    display:"flex", alignItems:"center", gap:8, marginBottom:16,
+                    padding:"9px 14px",
+                    background: searchUsed ? "rgba(106,180,245,0.07)" : "rgba(255,255,255,0.03)",
+                    border:`1px solid ${searchUsed ? "rgba(106,180,245,0.22)" : "rgba(255,255,255,0.08)"}`,
+                    borderRadius:10,
+                  }}>
+                    <span style={{ fontSize:14, lineHeight:1 }}>{searchUsed ? "🔍" : "⚠️"}</span>
+                    <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em", color: searchUsed ? "#6ab4f5" : "#6e6e73" }}>
+                      {searchUsed
+                        ? "Web-augmented — all three models received the same current web context before responding"
+                        : "Web search unavailable — responses based on model training data only"
+                      }
                     </span>
                   </div>
                 )}

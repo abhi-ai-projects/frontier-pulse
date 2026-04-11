@@ -48,6 +48,101 @@ const ALLOWED_ORIGINS = new Set([
   "http://localhost:3000",
 ]);
 
+// ── Web search augmentation ───────────────────────────────────────────────────
+// Detects time-sensitive prompts and fetches a compact grounding block from
+// Tavily's search API before running the three model calls. All three models
+// receive the same context so comparisons remain apples-to-apples even when
+// the question requires current information.
+//
+// Conservative trigger list — only fires on clear real-time signals to keep
+// latency and cost minimal. Falls back gracefully if Tavily is unavailable.
+
+const SEARCH_TRIGGER_PATTERNS: RegExp[] = [
+  /\b(latest|recent|newest|current|right now|just announced|just released|just happened)\b/i,
+  /\b(today|tonight|yesterday|this week|this month|this year)\b/i,
+  /\b(news|breaking|update|updates|announcement|announced|released|launched|published)\b/i,
+  /\b(2024|2025|2026)\b/,
+  /\b(stock price|share price|market cap|valuation|funding round|IPO|acquisition|merger)\b/i,
+  /\b(who is (the )?(current|new)|who (won|leads|runs|heads|is leading|is running))\b/i,
+];
+
+/** Returns true when the prompt clearly signals a need for real-time web data. */
+function needsWebSearch(text: string): boolean {
+  return SEARCH_TRIGGER_PATTERNS.some(p => p.test(text));
+}
+
+// Strip known prompt-injection patterns from externally sourced snippets before
+// injecting them into model prompts. Tavily content is generally clean but we
+// sanitise defensively since we do not control what third-party sites publish.
+const WEB_CONTENT_STRIP =
+  /ignore\s+(all\s+|previous\s+)?instructions|disregard.*prompt|forget.*instructions|system:|<system>|<\|im_start\|>|\[INST\]/gi;
+
+/**
+ * Fetches up to 3 fresh search snippets from Tavily and formats them as a
+ * <web_context> block ready for injection into the model user-turn.
+ *
+ * Returns null on any failure (misconfiguration, network error, empty results)
+ * so the caller can degrade gracefully to the standard no-search flow.
+ */
+async function fetchWebContext(query: string): Promise<string | null> {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) {
+    console.warn("[search] TAVILY_API_KEY not configured — skipping web context");
+    return null;
+  }
+
+  try {
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key:             apiKey,
+        query,
+        search_depth:        "basic",   // cheapest tier; still returns fresh results
+        max_results:         3,          // 3 snippets ≈ 150–250 injected tokens total
+        include_answer:      false,      // raw snippets only — no Tavily synthesis pass
+        include_raw_content: false,      // summaries only; raw HTML bodies are too large
+      }),
+      // Hard 5 s cap — Tavily is usually <1 s but we never want it blocking model calls
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) {
+      console.warn("[search] Tavily responded with HTTP", res.status);
+      return null;
+    }
+
+    const data = await res.json() as {
+      results?: { title?: string; content?: string }[];
+    };
+
+    const snippets = (data.results ?? [])
+      .slice(0, 3)
+      .map(r => r.content?.trim())
+      .filter((s): s is string => typeof s === "string" && s.length > 30)
+      // Sanitise injection patterns and cap each snippet so the block stays lean
+      .map(s => s.replace(WEB_CONTENT_STRIP, "[removed]").slice(0, 450));
+
+    if (snippets.length === 0) return null;
+
+    const today = new Date().toLocaleDateString("en-US", {
+      year: "numeric", month: "long", day: "numeric",
+    });
+
+    // XML-tagged block signals to models that this is structured reference data,
+    // not a new instruction. Models trained on RLHF handle this convention well.
+    return [
+      `<web_context date="${today}">`,
+      ...snippets.map((s, i) => `[${i + 1}] ${s}`),
+      `</web_context>`,
+    ].join("\n");
+
+  } catch (err) {
+    console.warn("[search] Tavily fetch error:", err);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   // ── 0. Origin check — first-line defence against scripted abuse ────────────
   // Browsers always include Origin on fetch() POST requests; curl omits it by
@@ -133,15 +228,43 @@ export async function POST(req: NextRequest) {
   // Country — Vercel injects x-vercel-ip-country on edge requests (ISO 3166-1 alpha-2)
   const country = req.headers.get("x-vercel-ip-country") ?? "unknown";
 
-  // ── 4. System prompt ───────────────────────────────────────────────────────
+  // ── 3c. Web search — fetch grounding context for time-sensitive queries ──────
+  // Runs AFTER moderation so we never spend a Tavily credit on a flagged prompt.
+  // webContext is injected into the user turn for all three models so they share
+  // the same factual baseline. searchUsed / searchFallback are returned to the
+  // client so the UI can show the correct state badge on the Compare tab.
+  let webContext: string | null = null;
+  const wantsSearch  = needsWebSearch(sanitized);
+  let searchUsed     = false;
+  let searchFallback = false;
+
+  if (wantsSearch) {
+    webContext = await fetchWebContext(sanitized);
+    if (webContext) {
+      searchUsed = true;     // context injected successfully
+    } else {
+      searchFallback = true; // search was attempted but Tavily was unavailable/empty
+    }
+  }
+
+  // ── 4. Build prompts ───────────────────────────────────────────────────────
   const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
   const unifiedSystem = `${systemContext} ${baseGuardrail} Respond immediately and directly to what the user gave you. Do not ask for clarification, do not explain what you could help with, and do not list your capabilities. If the input is brief or ambiguous, respond only to what is actually there — do not invent a scenario, fabricate context, or hallucinate specifics. Do not default to email format unless the user explicitly says "email". No Subject lines, no salutations, no sign-offs unless explicitly requested. Aim for 200-250 words.`;
+
+  // If web context was fetched, prepend it to the user turn so all three models
+  // receive identical grounding data before the actual question. We inject at the
+  // user-message level (not system) so the context reads as reference material,
+  // not an instruction — this is the convention models handle most reliably.
+  const userMessage = webContext
+    ? `${webContext}\n\nUsing the above as current factual context where relevant, respond to:\n${sanitized}`
+    : sanitized;
 
   try {
     // ── 5. Run all 3 models in parallel ───────────────────────────────────────
     const [claudeRes, openaiRes, geminiRes] = await Promise.allSettled([
 
       // Claude Sonnet 4.6
+      // userMessage = sanitized prompt, optionally prefixed with <web_context> block
       (async () => {
         const start = Date.now();
         const msg = await anthropic.messages.create({
@@ -149,7 +272,7 @@ export async function POST(req: NextRequest) {
           max_tokens: 1000,
           temperature: 0.7,
           system: unifiedSystem,
-          messages: [{ role: "user", content: sanitized }],
+          messages: [{ role: "user", content: userMessage }],
         });
         return { msg, ms: Date.now() - start };
       })(),
@@ -163,7 +286,7 @@ export async function POST(req: NextRequest) {
           temperature: 0.7,
           messages: [
             { role: "system", content: unifiedSystem },
-            { role: "user",   content: sanitized },
+            { role: "user",   content: userMessage },
           ],
         });
         return { completion, ms: Date.now() - start };
@@ -175,7 +298,7 @@ export async function POST(req: NextRequest) {
         const callGemini = async (modelName: string) => {
           const model = gemini.getGenerativeModel({ model: modelName, systemInstruction: unifiedSystem });
           const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: sanitized }] }],
+            contents: [{ role: "user", parts: [{ text: userMessage }] }],
             // maxOutputTokens must be generous for Gemini 3.1 Pro: thinking tokens count
             // against this budget. thinkingBudget:1024 bounds thinking overhead so the
             // response always has room. Cast to any — thinkingConfig not yet in SDK types.
@@ -331,6 +454,7 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
     // ── 10. Return response ────────────────────────────────────────────────────
     // attemptsLeft + windowStart let the client stay in sync with the server's
     // authoritative state — including the correct reset time even in incognito.
+    // searchUsed / searchFallback let the Compare tab show the correct badge.
     return NextResponse.json({
       claude: claudeText,
       openai: openaiText,
@@ -340,6 +464,8 @@ Return ONLY this JSON object. No markdown, no code fences, no extra text before 
       usage,
       attemptsLeft,
       windowStart,
+      searchUsed,      // true  → web context was injected into all three prompts
+      searchFallback,  // true  → search was triggered but Tavily was unavailable
     });
 
   } catch (error) {
