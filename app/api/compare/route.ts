@@ -253,10 +253,13 @@ export async function POST(req: NextRequest) {
 
   // If web context was fetched, prepend it to the user turn so all three models
   // receive identical grounding data before the actual question. We inject at the
-  // user-message level (not system) so the context reads as reference material,
-  // not an instruction — this is the convention models handle most reliably.
+  // user-message level (not system) so the context reads as reference material.
+  //
+  // The instruction explicitly tells models NOT to reference, cite, or acknowledge
+  // the context — they should just use the information naturally. Without this,
+  // models open with "Based on the web context provided..." which feels unnatural.
   const userMessage = webContext
-    ? `${webContext}\n\nUsing the above as current factual context where relevant, respond to:\n${sanitized}`
+    ? `${webContext}\n\nRespond to the following. Use the above context to inform your answer where relevant, but do not mention or reference the context, cite it as a source, or indicate that you received additional information — simply respond naturally:\n${sanitized}`
     : sanitized;
 
   try {
@@ -307,7 +310,10 @@ export async function POST(req: NextRequest) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             // maxOutputTokens = thinkingBudget (512) + target response (1000) to match
             // Claude and GPT at ~1000 tokens net output.
-            generationConfig: { maxOutputTokens: 1512, temperature: 0.7, stopSequences: [], thinkingConfig: { thinkingBudget: 512 } } as any,
+            // thinkingBudget: 128 — minimal reasoning pass to keep Gemini latency
+            // and verbosity comparable to Claude and GPT. Set to 0 to disable
+            // thinking entirely, or raise if response quality drops on complex prompts.
+            generationConfig: { maxOutputTokens: 1256, temperature: 0.7, stopSequences: [], thinkingConfig: { thinkingBudget: 128 } } as any,
           });
           const candidate = result.response.candidates?.[0];
           const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || result.response.text();

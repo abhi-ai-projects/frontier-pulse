@@ -915,13 +915,9 @@ export default function Home() {
                 </div>
 
                 {error && <p style={{ fontSize:13, color:"#ff6b6b", marginBottom:16 }}>{error}</p>}
-                {/* Disclaimer — second sentence updates when prompt looks time-sensitive */}
+                {/* Disclaimer — single line, always accurate regardless of query type */}
                 <p style={{ fontSize:11, color:"#8e8e93", marginBottom:40, fontFamily:"'Sora',sans-serif", letterSpacing:"0.01em", lineHeight:1.6 }}>
-                  Sent to Anthropic, OpenAI &amp; Google APIs — do not include personal or confidential information.<br/>
-                  {promptNeedsSearch(prompt)
-                    ? "Web search enabled — current context will be fetched and shared with all three models."
-                    : "Responses reflect training data — recent events may be missing."
-                  }
+                  Sent to Anthropic, OpenAI &amp; Google APIs and a 3P web-search if required — do not include personal or confidential information.
                 </p>
               </div>
 
@@ -930,7 +926,38 @@ export default function Home() {
               ════════════════════════════════════ */}
               <div className={`section-transition ${section === "compare" ? "section-visible" : "section-hidden"}`}>
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
-                  {sectionHeader("Live Comparison", prompt.length > 90 ? `"${prompt.slice(0, 90)}…"` : `"${prompt}"`)}
+                  {/* Compare section header — custom (not sectionHeader helper) so we can
+                      inline the search indicator icon next to the h2 title. */}
+                  <div style={{ padding:"40px 0 28px" }}>
+                    <h2 style={{ fontFamily:"'Sora',sans-serif", fontSize:22, fontWeight:700, color:"#f5f5f7", letterSpacing:"-0.025em", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
+                      Live Comparison
+                      {/* Search indicator — only rendered once a comparison is in flight or done.
+                          Full opacity (white) when web search was used; dimmed to 25% when not.
+                          title= gives a native hover tooltip with no extra CSS needed. */}
+                      {submitted && (
+                        <span
+                          title={
+                            loading && promptNeedsSearch(prompt)
+                              ? "Fetching web context…"
+                              : searchUsed
+                                ? "Web-augmented — all three models received the same current web context before responding"
+                                : searchFallback
+                                  ? "Web search unavailable — responses based on model training data only"
+                                  : "Web search not required for this query"
+                          }
+                          style={{ display:"flex", alignItems:"center", opacity: searchUsed ? 1 : 0.25, color:"#f5f5f7", transition:"opacity 0.4s ease", cursor:"default", flexShrink:0 }}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.6"/>
+                            <path d="M13 13l3.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                          </svg>
+                        </span>
+                      )}
+                    </h2>
+                    <p style={{ fontSize:13, color:"#a1a1a6", fontFamily:"'Figtree',sans-serif" }}>
+                      {prompt.length > 90 ? `"${prompt.slice(0, 90)}…"` : `"${prompt}"`}
+                    </p>
+                  </div>
                   {/* Icon buttons — desktop only; mobile gets labeled buttons below the CTA */}
                   <div className="compare-nav-desktop" style={{ gap:8, paddingTop:40, flexShrink:0 }}>
                     {iconBtn("↵", "Current Prompt", () => goToSection("prompt"))}
@@ -971,25 +998,6 @@ export default function Home() {
                       </span>
                     </div>
 
-                  </div>
-                )}
-
-                {/* Web-augmented / search-fallback badge — shown after results arrive */}
-                {hasRes && (searchUsed || searchFallback) && (
-                  <div style={{
-                    display:"flex", alignItems:"center", gap:8, marginBottom:16,
-                    padding:"9px 14px",
-                    background: searchUsed ? "rgba(106,180,245,0.07)" : "rgba(255,255,255,0.03)",
-                    border:`1px solid ${searchUsed ? "rgba(106,180,245,0.22)" : "rgba(255,255,255,0.08)"}`,
-                    borderRadius:10,
-                  }}>
-                    <span style={{ fontSize:14, lineHeight:1 }}>{searchUsed ? "🔍" : "⚠️"}</span>
-                    <span style={{ fontSize:11, fontFamily:"'Sora',sans-serif", letterSpacing:"0.02em", color: searchUsed ? "#6ab4f5" : "#6e6e73" }}>
-                      {searchUsed
-                        ? "Web-augmented — all three models received the same current web context before responding"
-                        : "Web search unavailable — responses based on model training data only"
-                      }
-                    </span>
                   </div>
                 )}
 
