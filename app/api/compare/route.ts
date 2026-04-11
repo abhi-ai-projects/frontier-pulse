@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
 
   // ── 4. Build prompts ───────────────────────────────────────────────────────
   const baseGuardrail = "Only respond to professional and personal contexts. Decline requests that are harmful, unethical, or abusive.";
-  const unifiedSystem = `${systemContext} ${baseGuardrail} Respond immediately and directly to what the user gave you. Do not ask for clarification, do not explain what you could help with, and do not list your capabilities. If the input is brief or ambiguous, respond only to what is actually there — do not invent a scenario, fabricate context, or hallucinate specifics. Do not default to email format unless the user explicitly says "email". No Subject lines, no salutations, no sign-offs unless explicitly requested. Aim for 200-250 words.`;
+  const unifiedSystem = `${systemContext} ${baseGuardrail} Respond immediately and directly to what the user gave you. Do not ask for clarification, do not explain what you could help with, and do not list your capabilities. If the input is brief or ambiguous, respond only to what is actually there — do not invent a scenario, fabricate context, or hallucinate specifics. Do not default to email format unless the user explicitly says "email". No Subject lines, no salutations, no sign-offs unless explicitly requested. Match your response length strictly to the complexity of the input: a simple factual question gets a direct 1–3 sentence answer, a complex analysis can be fuller. Never pad or add context beyond what was asked. 200 words maximum.`;
 
   // If web context was fetched, prepend it to the user turn so all three models
   // receive identical grounding data before the actual question. We inject at the

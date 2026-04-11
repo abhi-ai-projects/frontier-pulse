@@ -293,3 +293,14 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; }
   z-index: 200;
 }
 .icon-btn[data-tip]:not([data-tip=""]):hover::after { opacity: 1; }
+
+/* .tip-right — tooltip variant that appears to the RIGHT of the element.
+   Used for inline icons inside headings where below-positioning overlaps
+   the subtitle. Does not affect the default below-positioned tooltips. */
+.icon-btn.tip-right[data-tip]:not([data-tip=""])::after {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  left: calc(100% + 8px);
+  right: auto;
+}

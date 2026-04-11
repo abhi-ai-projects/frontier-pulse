@@ -937,15 +937,15 @@ export default function Home() {
                           the native title= attribute has OS-level delay and is unreliable on SVGs. */}
                       {submitted && (
                         <span
-                          className="icon-btn"
+                          className="icon-btn tip-right"
                           data-tip={
                             loading && promptNeedsSearch(prompt)
-                              ? "Fetching web context…"
+                              ? "Fetching…"
                               : searchUsed
-                                ? "Web-augmented — all three models received the same current web context before responding"
+                                ? "Web-Search used"
                                 : searchFallback
-                                  ? "Web search unavailable — responses based on model training data only"
-                                  : "Web search not required for this query"
+                                  ? "Search unavailable"
+                                  : "Web-Search not needed"
                           }
                           style={{ display:"flex", alignItems:"center", opacity: searchUsed ? 1 : 0.25, color:"#f5f5f7", transition:"opacity 0.4s ease", cursor:"default", flexShrink:0 }}
                         >
