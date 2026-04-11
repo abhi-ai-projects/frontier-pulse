@@ -933,10 +933,12 @@ export default function Home() {
                       Live Comparison
                       {/* Search indicator — only rendered once a comparison is in flight or done.
                           Full opacity (white) when web search was used; dimmed to 25% when not.
-                          title= gives a native hover tooltip with no extra CSS needed. */}
+                          Uses the existing icon-btn + data-tip CSS for an instant tooltip —
+                          the native title= attribute has OS-level delay and is unreliable on SVGs. */}
                       {submitted && (
                         <span
-                          title={
+                          className="icon-btn"
+                          data-tip={
                             loading && promptNeedsSearch(prompt)
                               ? "Fetching web context…"
                               : searchUsed
